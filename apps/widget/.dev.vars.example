@@ -1,1 +1,7 @@
-WIDGET_TOKEN_SECRET=<same-vlaue-as-app>
+# Copy to .dev.vars for local development. Never commit the real file.
+# Must equal the app's WIDGET_TOKEN_SECRET: both Workers verify the same token.
+WIDGET_TOKEN_SECRET=<same-value-as-app>
+# Pairs with the TURNSTILE_SITE_KEY var in apps/app/wrangler.jsonc. The value
+# below is Cloudflare's always-passes test secret, right for local dev; use the
+# real widget's secret in production (wrangler secret put TURNSTILE_SECRET_KEY).
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA

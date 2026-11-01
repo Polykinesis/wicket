@@ -31,6 +31,11 @@ export class CloudflareTurnstile implements TurnstileVerifier {
 
   constructor(secret: string) {
     this.#secret = secret;
+    if (!secret) {
+      // Siteverify answers 400 to an empty or "undefined" secret, which
+      // surfaces as every visitor being refused with no useful log.
+      console.error("TURNSTILE_SECRET_KEY is not set; every challenge will be refused");
+    }
   }
 
   async verify(token: string, remoteIp: string | null): Promise<TurnstileOutcome> {
@@ -44,14 +49,20 @@ export class CloudflareTurnstile implements TurnstileVerifier {
     try {
       const response = await fetch(SITEVERIFY_URL, { method: "POST", body });
       if (!response.ok) {
+        console.warn("Turnstile siteverify answered", { status: response.status });
         return { solved: false };
       }
       const outcome: unknown = await response.json();
       if (typeof outcome !== "object" || outcome === null) {
+        console.warn("Turnstile siteverify answered with a non-object body");
         return { solved: false };
       }
       const { success, hostname } = outcome as { success?: unknown; hostname?: unknown };
       if (success !== true) {
+        // The codes name the misconfiguration (wrong secret, spent token,
+        // bad sitekey) and are safe to log: they never reach the caller.
+        const codes = (outcome as { "error-codes"?: unknown })["error-codes"];
+        console.warn("Turnstile siteverify refused", { codes });
         return { solved: false };
       }
       return { solved: true, hostname: typeof hostname === "string" ? hostname : null };

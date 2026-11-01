@@ -141,6 +141,11 @@ describe("mintSession", () => {
       refusal: "turnstile_failed",
     });
 
+    // Cloudflare's test keys answer with a dummy hostname: exempt, dev only.
+    const testKey = await seed({ turnstileSiteKey: "1x00000000000000000000AA" });
+    const dummy = deps(new FixtureTurnstile(true, "example.com"));
+    expect((await mintSession(dummy, request("/session", testKey), "t")).ok).toBe(true);
+
     // A response without a hostname still passes; only a contradicting one fails.
     expect(
       (await mintSession(deps(new FixtureTurnstile(true, null)), request("/session", siteKey), "t"))

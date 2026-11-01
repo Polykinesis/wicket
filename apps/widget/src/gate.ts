@@ -91,6 +91,7 @@ export async function mintSession(
     return { ok: false, refusal: "origin_not_allowed" };
   }
   if (!turnstileToken) {
+    console.warn("Turnstile token missing from the session request");
     return { ok: false, refusal: "turnstile_failed" };
   }
 
@@ -104,7 +105,15 @@ export async function mintSession(
   // The challenge was solved on a page; that page must be the one asking.
   // Without this, a token solved on one allowlisted site could be presented
   // with another allowlisted site's Origin header from outside a browser.
-  if (solved.hostname !== null && solved.hostname !== new URL(origin).hostname) {
+  // Cloudflare's test keys answer with a fixed dummy hostname and only ever
+  // verify against test secrets, so they are exempt rather than unusable.
+  const expected = new URL(origin).hostname;
+  if (
+    solved.hostname !== null &&
+    solved.hostname !== expected &&
+    !isTurnstileTestKey(config.value.config.turnstileSiteKey)
+  ) {
+    console.warn("Turnstile solved on another host", { solved: solved.hostname, expected });
     return { ok: false, refusal: "turnstile_failed" };
   }
 
@@ -118,6 +127,16 @@ export async function mintSession(
     ok: true,
     value: { token: await signVisitorToken(envelope, deps.tokenSecret), envelope },
   };
+}
+
+/**
+ * Cloudflare's documented dummy site keys (`1x…AA`, `1x…BB`, `2x…`, `3x…FF`).
+ * Their tokens validate only with the matching dummy secrets, so a production
+ * secret can never be fooled by one; the exemption is about dev ergonomics,
+ * not trust.
+ */
+export function isTurnstileTestKey(siteKey: string): boolean {
+  return /^[123]x0{20}[A-Z]{2}$/.test(siteKey);
 }
 
 /**

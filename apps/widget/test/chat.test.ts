@@ -7,7 +7,8 @@ import {
   widgetConfigKvKey,
 } from "@cf-chat/shared";
 import { describe, expect, it } from "vitest";
-import worker, { SOCKET_REFUSED_CODE } from "../src/index.ts";
+import worker from "../src/index.ts";
+import { SOCKET_REFUSED_CODE } from "../src/socket.ts";
 
 const ORIGIN = "https://acme.example.com";
 
