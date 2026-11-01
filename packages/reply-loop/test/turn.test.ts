@@ -63,6 +63,23 @@ describe("runTurn", () => {
     expect(summary?.chunkCount).toBe(1);
   });
 
+  it("hands the visitor's page context to the generator untouched", async () => {
+    const generator = new FixtureGenerator("fixture/echo", {
+      report: { confidence: 0.9, needsHuman: false, reason: null },
+    });
+    await collect(
+      runTurn({
+        tenantId,
+        messages: ask("refunds"),
+        retriever: new FixtureRetriever(knowledge),
+        generator,
+        thresholds,
+        context: { pageTitle: "Refunds | Acme" },
+      }),
+    );
+    expect(generator.inputs[0]?.context).toEqual({ pageTitle: "Refunds | Acme" });
+  });
+
   it("emits sources before any answer text, so citations can render alongside", async () => {
     const { all } = await collect(
       runTurn({

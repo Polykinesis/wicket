@@ -40,6 +40,7 @@ export class WorkersAIGenerator implements Generator {
         system: buildSystemPrompt({
           chunks: input.chunks,
           tenantName: this.#options.tenantName ?? "this company",
+          context: input.context,
         }),
         messages: input.messages.map((message) => ({
           role: message.role,

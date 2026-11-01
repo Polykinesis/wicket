@@ -11,7 +11,7 @@ import {
   checkSelfReport,
   type EscalationDecision,
 } from "./escalation.ts";
-import type { Generator, GeneratorMessage, SelfReport } from "./types.ts";
+import type { Generator, GeneratorMessage, SelfReport, TurnContext } from "./types.ts";
 
 /**
  * What one visitor turn produces, in the order it produces it.
@@ -51,6 +51,8 @@ export interface TurnInput {
   readonly retriever: Retriever;
   readonly generator: Generator;
   readonly thresholds: EscalationThresholds;
+  /** Where the visitor is. Goes to the generator as data; retrieval ignores it for now. */
+  readonly context?: TurnContext | undefined;
 }
 
 /**
@@ -150,6 +152,7 @@ export async function* runTurn(input: TurnInput): AsyncIterable<TurnEvent> {
     tenantId: input.tenantId,
     messages: input.messages,
     chunks,
+    context: input.context,
   });
 
   if (!generated.ok) {

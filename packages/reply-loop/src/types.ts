@@ -7,10 +7,21 @@ import type { Result, TenantId } from "@cf-chat/shared";
  */
 export type GeneratorMessage = RetrievalMessage;
 
+/**
+ * What the widget knows about where the visitor is. Visitor-controlled text
+ * (the host page sets its own title), so the prompt treats it as data, caps it
+ * and delimits it the way it does retrieved chunks. Only the title reaches the
+ * model; the URL is for traces.
+ */
+export interface TurnContext {
+  readonly pageTitle: string | null;
+}
+
 export interface GenerationInput {
   readonly tenantId: TenantId;
   readonly messages: readonly GeneratorMessage[];
   readonly chunks: readonly RetrievedChunk[];
+  readonly context?: TurnContext | undefined;
 }
 
 /**

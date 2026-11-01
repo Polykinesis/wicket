@@ -24,6 +24,7 @@ import { createUIMessageStream, createUIMessageStreamResponse, type UIMessage } 
 import { createWorkersAI } from "workers-ai-provider";
 import { VISITOR_ID_HEADER } from "./agent-auth.ts";
 import { withDb } from "./api/db.ts";
+import { readVisitorPage } from "./page-context.ts";
 
 /**
  * Persisted agent state.
@@ -84,7 +85,10 @@ export class Conversation extends AIChatAgent<Cloudflare.Env, ConversationState>
     // The tenant comes from the Durable Object's name, which was chosen by the
     // Worker that authenticated the request. Taking it from the message body
     // would mean taking it from the socket.
-    const identity = parseConversationAgentName(this.name);
+    // Decoded defensively: a caller that percent-encodes the colon would
+    // otherwise create an object whose name no one can parse. The widget no
+    // longer encodes it, so this is a no-op on the expected path.
+    const identity = parseConversationAgentName(safeDecode(this.name));
     if (!identity) {
       // Worded without the placeholder braces on purpose: as a plain string
       // they trip the template-literal lint, and this is prose, not a template.
@@ -106,6 +110,7 @@ export class Conversation extends AIChatAgent<Cloudflare.Env, ConversationState>
     const generator = this.#generator();
     const retriever = new AISearchRetriever(env.AI_SEARCH);
     const visitorId = this.#visitorId();
+    const page = readVisitorPage(this.messages.at(-1));
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -116,6 +121,11 @@ export class Conversation extends AIChatAgent<Cloudflare.Env, ConversationState>
         await tracing.enterSpan("reply_loop.turn", async (span) => {
           span.setAttribute("tenant.id", tenantId);
           span.setAttribute("model.id", generator.modelId);
+          if (page) {
+            // Path only. The host is the tenant's own site and the query never
+            // arrives, so this is the one piece of page context worth a trace.
+            span.setAttribute("visitor.page_path", page.path);
+          }
 
           for await (const event of runTurn({
             tenantId,
@@ -123,6 +133,7 @@ export class Conversation extends AIChatAgent<Cloudflare.Env, ConversationState>
             retriever,
             generator,
             thresholds,
+            context: page ? { pageTitle: page.title } : undefined,
           })) {
             switch (event.type) {
               case "sources":
@@ -281,6 +292,14 @@ export class Conversation extends AIChatAgent<Cloudflare.Env, ConversationState>
       // anyway at this point in the stream.
       console.error("Could not enqueue turn analytics", { conversationId, cause });
     }
+  }
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
   }
 }
 
