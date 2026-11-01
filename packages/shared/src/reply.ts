@@ -33,6 +33,30 @@ export const DEFAULT_ESCALATION_THRESHOLDS: EscalationThresholds = {
   confidence: 0.6,
 };
 
+/**
+ * Every sub-rule an escalation can fire on, as a runtime list.
+ *
+ * Here rather than in `reply-loop` because the widget has to validate the
+ * `data-escalation` part it receives and switch on the rule exhaustively, and a
+ * browser bundle has no business importing the reply loop to get a string list.
+ * `reply-loop` derives its `EscalationRule` type from this, so there is one
+ * source of truth (ADR-017).
+ *
+ * `retrieval_failed` means retrieval itself failed or is unconfigured, so
+ * signal 1 could not be evaluated, which is different from it finding nothing.
+ */
+export const ESCALATION_RULES = [
+  "no_chunks",
+  "below_retrieval_threshold",
+  "retrieval_failed",
+  "no_self_report",
+  "model_requested_human",
+  "below_confidence_threshold",
+  "asked_for_human",
+  "sensitive_topic",
+] as const;
+export type EscalationRule = (typeof ESCALATION_RULES)[number];
+
 /** Both dials are probabilities, so both boundaries are the same. */
 export const thresholdSchema = z.number().min(0).max(1);
 

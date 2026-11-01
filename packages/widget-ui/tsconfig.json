@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // Browser code. No Workers types and no node types on purpose: anything
+    // that needs a binding belongs in `apps/widget`, and a stray import of
+    // either would be a design mistake this makes visible at compile time.
+    "types": ["vite/client"]
+  },
+  "include": ["src", "test"]
+}

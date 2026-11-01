@@ -1,0 +1,73 @@
+/*
+ * The widget's whole stylesheet, compiled by `pnpm build:css` into
+ * `dist/widget.css` and injected into the widget's shadow root by the embed.
+ *
+ * Imported piecewise rather than `@import "tailwindcss"` so `source()` can sit
+ * on the utilities import, which is what Tailwind v4 requires when the parts are
+ * imported separately. Preflight is kept: inside a shadow root it resets only
+ * the widget, never the host page.
+ *
+ * Shadow DOM caveat (unverified until the embed mounts): browsers ignore
+ * `@property` inside a shadow root, and Tailwind's shadow, ring and transform
+ * utilities register their variables that way. The components avoid ring-*
+ * utilities and use plain `outline` for focus, and use only the `shadow-panel`
+ * token below, which does not depend on a registered property.
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source("./");
+
+/*
+ * Tokens. `--color-brand` and `--color-brand-ink` are the white-label dials:
+ * the embed overrides them with an inline style on the host element, which
+ * beats the `:root, :host` rule Tailwind emits, so a tenant's colour needs no
+ * rebuild.
+ */
+@theme {
+  --color-brand: #0f5c4d;
+  --color-brand-ink: #ffffff;
+  --color-brand-soft: #e7f2ef;
+
+  --color-ink: #17201d;
+  --color-ink-2: #4a5652;
+  --color-ink-3: #66716d;
+  --color-line: #dde3e1;
+  --color-field: #c7cfcc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f7f6;
+
+  --color-mark: #fff0b3;
+  --color-gap: #fdf6e7;
+  --color-gap-line: #e9d29a;
+  --color-ok: #1d7a46;
+  --color-danger: #b42318;
+
+  --shadow-panel: 0 12px 40px rgb(15 30 25 / 0.18), 0 2px 6px rgb(15 30 25 / 0.08);
+
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+@layer base {
+  :host {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Focus is an outline, not a ring: see the Shadow DOM caveat above. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}

@@ -1,5 +1,5 @@
 import type { RetrievedChunk, ScoreKind } from "@cf-chat/retrieval";
-import type { EscalationThresholds } from "@cf-chat/shared";
+import type { EscalationRule, EscalationThresholds } from "@cf-chat/shared";
 import type { SelfReport } from "./types.ts";
 
 /**
@@ -19,16 +19,8 @@ export type EscalationDecision =
       readonly reason: string;
     };
 
-export type EscalationRule =
-  | "no_chunks"
-  | "below_retrieval_threshold"
-  /** Retrieval itself failed or is unconfigured, so signal 1 cannot be evaluated. */
-  | "retrieval_failed"
-  | "no_self_report"
-  | "model_requested_human"
-  | "below_confidence_threshold"
-  | "asked_for_human"
-  | "sensitive_topic";
+/** Re-exported so existing importers of `@cf-chat/reply-loop` keep working. */
+export type { EscalationRule };
 
 export const NO_ESCALATION: EscalationDecision = { escalate: false };
 
