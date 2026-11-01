@@ -35,11 +35,12 @@ export function Launcher({
   readonly onOpen: () => void;
 }): ReactElement {
   const ref = useRef<HTMLButtonElement>(null);
+  const focusAtMount = useRef(focusOnMount);
   useEffect(() => {
-    if (focusOnMount) {
+    if (focusAtMount.current) {
       ref.current?.focus();
     }
-  }, [focusOnMount]);
+  }, []);
 
   switch (variant) {
     case "labelled":
@@ -88,6 +89,7 @@ export function Panel({
   scopeLine,
   onClose,
   footer,
+  focusOnMount,
   bodyRef,
   children,
 }: {
@@ -95,6 +97,12 @@ export function Panel({
   readonly scopeLine: string | null;
   readonly onClose: () => void;
   readonly footer: ReactNode;
+  /**
+   * Move focus to Close when the panel appears. True when the visitor opened
+   * it; false when the widget mounts already open (a restored session), where
+   * taking focus would yank it away from the host page.
+   */
+  readonly focusOnMount: boolean;
   /** The scrolling body, for whoever owns the content to scroll it. */
   readonly bodyRef?: Ref<HTMLDivElement>;
   readonly children: ReactNode;
@@ -103,8 +111,13 @@ export function Panel({
   const scopeId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  // Read once at mount. A later re-render with the prop flipped must not
+  // re-focus Close under a visitor who is typing.
+  const focusAtMount = useRef(focusOnMount);
   useEffect(() => {
-    closeRef.current?.focus();
+    if (focusAtMount.current) {
+      closeRef.current?.focus();
+    }
   }, []);
 
   return (

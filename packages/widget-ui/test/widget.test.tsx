@@ -59,13 +59,18 @@ describe("launcher", () => {
     expect(button.textContent).toBe("");
   });
 
-  it("does not take focus when the widget first mounts closed", () => {
-    renderWidget({ open: false });
+  it("does not take focus when the widget first mounts, closed or open", () => {
+    const closed = renderWidget({ open: false });
+    expect(document.activeElement).toBe(document.body);
+    closed.unmount();
+
+    renderWidget({ open: true });
     expect(document.activeElement).toBe(document.body);
   });
 
-  it("takes focus back when the panel closes", () => {
-    const { props, rerender } = renderWidget({ open: true });
+  it("moves focus into the panel on open and back to the launcher on close", () => {
+    const { props, rerender } = renderWidget({ open: false });
+    rerender(<Widget {...props} open={true} />);
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Close" }));
     rerender(<Widget {...props} open={false} />);
     expect(document.activeElement).toBe(

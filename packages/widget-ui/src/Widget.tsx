@@ -47,10 +47,13 @@ export function Widget({
 }: WidgetProps): ReactElement {
   const [direct, setDirect] = useState<Direct>({ phase: "closed" });
 
-  // Whether the panel has ever been open. The launcher takes focus only when
-  // it reappears after a close, never when the widget first mounts.
+  // Focus moves between launcher and panel only on a change the visitor made.
+  // Neither takes focus on the widget's first render, whichever way it mounts:
+  // a widget must not steal focus from the page it was embedded in.
+  const mounted = useRef(false);
   const everOpened = useRef(open);
   useEffect(() => {
+    mounted.current = true;
     if (open) {
       everOpened.current = true;
     }
@@ -59,12 +62,14 @@ export function Widget({
   const bodyRef = useRef<HTMLDivElement>(null);
   const latestRef = useRef<HTMLDivElement>(null);
   const turnCount = turns.length;
+  // On a new turn and on reopen: the body unmounts with the panel, so a
+  // conversation resumed later would otherwise show its first turn.
   useEffect(() => {
-    if (turnCount === 0) {
+    if (!open || turnCount === 0) {
       return;
     }
     scrollToLatest(bodyRef.current, latestRef.current);
-  }, [turnCount]);
+  }, [open, turnCount]);
 
   if (!open) {
     return (
@@ -86,6 +91,7 @@ export function Widget({
       title={`Ask ${scope.tenantName}`}
       scopeLine={scopeLine(scope, now)}
       onClose={() => onOpenChange(false)}
+      focusOnMount={mounted.current}
       bodyRef={bodyRef}
       footer={
         <Composer
@@ -144,8 +150,14 @@ function scrollToLatest(scroller: HTMLDivElement | null, latest: HTMLDivElement 
   if (!scroller || !latest) {
     return;
   }
+  // Align the turn with the top of the content area, under the body's own
+  // padding, not with the border where the header divider sits.
+  const padding = Number.parseFloat(getComputedStyle(scroller).paddingTop) || 0;
   const top =
-    latest.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    latest.getBoundingClientRect().top -
+    scroller.getBoundingClientRect().top +
+    scroller.scrollTop -
+    padding;
   const reduceMotion =
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
