@@ -52,6 +52,26 @@ describe("launcher", () => {
     renderWidget({ open: false, scope: { tenantName: "Acme" } });
     expect(screen.getByRole("button", { name: "Ask a question" })).toBeTruthy();
   });
+
+  it("is icon-only when asked, keeping the label for assistive tech", () => {
+    renderWidget({ open: false, launcher: "icon" });
+    const button = screen.getByRole("button", { name: "Ask about pricing, setup and refunds" });
+    expect(button.textContent).toBe("");
+  });
+
+  it("does not take focus when the widget first mounts closed", () => {
+    renderWidget({ open: false });
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("takes focus back when the panel closes", () => {
+    const { props, rerender } = renderWidget({ open: true });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Close" }));
+    rerender(<Widget {...props} open={false} />);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Ask about pricing, setup and refunds" }),
+    );
+  });
 });
 
 describe("scope line", () => {

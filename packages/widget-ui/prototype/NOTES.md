@@ -1,7 +1,9 @@
 # Widget C prototype: verdict
 
-Throwaway. Delete `widget-c.prototype.html` and this file once the real
-components in `src/` have a visual check (a Shadow DOM mount or preview page).
+The prototype HTML is gone. The real components in `src/` were checked against
+it in a shadow root on a hostile host page (`preview/`, `pnpm preview`) on
+2026-11-01, desktop and 390px, and read as option C. This file stays as the
+record of why the widget looks the way it does.
 
 ## Question
 
@@ -44,9 +46,21 @@ install for a self-serve buyer).
 - **Excerpt, highlight, "as of" date and partial coverage are not on the wire.**
   ADR-017 (proposed) adds them; `src/` treats them as optional.
 
+## What the preview harness changed
+
+- Topics in the empty state were bordered pills and read as buttons. They are
+  now a plain separated list: a statement of coverage, not a filter.
+- The disclaimer and "Talk to a person" stack at phone width instead of
+  wrapping mid-sentence beside each other.
+- Two things the prototype could not show, because it was not in a shadow
+  root: Tailwind's `@property` registrations are ignored there (fixed at build
+  time, see `scripts/shadow-css.ts`) and host-page `*` rules inherit through
+  the host element (fixed with `.widget-root`, see `styles.css`).
+
 ## Open
 
-- Label width: the pill takes about 200px of the host page. Assumed owners can
-  collapse it to icon-only in settings. Not built.
+- Label width: the labelled pill is about 350px on desktop and nearly full
+  width on a phone. An icon-only variant exists (`launcher="icon"`); the
+  setting that selects it is Phase 1.
 - Thresholds of 10 documents and 20 questions are guesses. Revisit with real
   tenants.
