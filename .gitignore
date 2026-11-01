@@ -23,5 +23,8 @@ worker-configuration.d.ts
 # handoff
 handoff-XXXXXX.md.*
 
+# widget bundles copied from packages/widget-ui/dist by `pnpm --filter @cf-chat/widget assets`
+apps/widget/public/
+
 # Playwright
 .playwright-mcp

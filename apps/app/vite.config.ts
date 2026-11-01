@@ -34,10 +34,12 @@ export default defineConfig({
   plugins: [
     // `viteEnvironment.name: "ssr"` is what merges the Worker config into the
     // framework's SSR build. Without it the Worker is not part of the output.
-    cloudflare({
-      viteEnvironment: { name: "ssr" },
-      auxiliaryWorkers: [{ configPath: "../widget/wrangler.jsonc" }],
-    }),
+    // No `auxiliaryWorkers`: under it the plugin routes every inbound request
+    // through this Worker, so `widget` would have no address of its own in
+    // dev and could serve neither its assets nor a WebSocket upgrade. Two
+    // sessions is the dev setup (ADR-008 closure): `pnpm dev` here, `pnpm dev`
+    // in apps/widget, and the service binding crosses between them.
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
     tanstackStart(),
     viteReact(),
   ],
