@@ -5,6 +5,22 @@
   "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat"],
 
+  // A fixed port so the dev test host can allowlist it and the loader's
+  // `<script src>` has a stable origin. `app` runs on Vite's port in its own
+  // session; the service binding above crosses sessions (ADR-008 closure).
+  "dev": { "port": 8788 },
+
+  // The embed bundles (ADR-015's loader/main split), built by
+  // `packages/widget-ui` and copied into `public/` by this package's `assets`
+  // script. Requests to assets are free and unbilled; the gates below run
+  // the Worker first and everything else is served from `public/`, with the
+  // CORS and cache headers in `public/_headers`.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/config", "/session", "/chat", "/health"]
+  },
+
   // Shared with `app`: one namespace holds sessions, widget config and plan
   // limits. Read only from this Worker, and never read-after-write (CLAUDE.md),
   // so an origin added in the dashboard takes effect eventually rather than at

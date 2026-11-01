@@ -1,0 +1,18 @@
+# Copied into public/ by the `assets` script alongside the bundles.
+#
+# The hashed main bundle and its chunks are fetched by `import()` from a
+# customer's page, which is a CORS request even though the loader itself was a
+# plain <script src>. Public JavaScript with no credential, so `*` is right.
+# Hashed names mean the cache can be forever.
+/js/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+
+# The loader is unhashed: a new main bundle is picked up within five minutes.
+/embed.js
+  Cache-Control: public, max-age=300
+  Cross-Origin-Resource-Policy: cross-origin
+
+/manifest.json
+  Cache-Control: public, max-age=60

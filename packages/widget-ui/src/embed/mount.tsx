@@ -25,6 +25,11 @@ export interface MountOptions {
    * not requested twice.
    */
   readonly config?: WidgetPublicConfig;
+  /**
+   * Open the panel and start connecting as soon as it renders. The loader
+   * sets this: the visitor clicked its pill, and this mount is the response.
+   */
+  readonly openOnMount?: boolean;
   /** Overrides for tests and the preview. Defaults talk to `host`. */
   readonly client?: WidgetClient;
   readonly turnstile?: TurnstileChallenge;
@@ -78,6 +83,7 @@ export function mountWidget(hostEl: HTMLElement, options: MountOptions): Mounted
         turnstileContainer={turnstileContainer}
         launcher={options.launcher ?? "labelled"}
         initialConfig={options.config}
+        openOnMount={options.openOnMount ?? false}
         hostEl={hostEl}
       />
     </StrictMode>,
@@ -114,6 +120,7 @@ function WidgetApp({
   turnstileContainer,
   launcher,
   initialConfig,
+  openOnMount,
   hostEl,
 }: {
   readonly siteKey: string;
@@ -123,6 +130,7 @@ function WidgetApp({
   readonly turnstileContainer: HTMLElement;
   readonly launcher: LauncherVariant;
   readonly initialConfig: WidgetPublicConfig | undefined;
+  readonly openOnMount: boolean;
   readonly hostEl: HTMLElement;
 }): ReactElement | null {
   const chat = useWidgetChat({
@@ -133,9 +141,17 @@ function WidgetApp({
     turnstileContainer: () => turnstileContainer,
     initialConfig,
   });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openOnMount);
   const now = useNow();
   const config = chat.connection.config;
+
+  // The loader's pill was clicked before React existed; honour that click.
+  const openChat = chat.open;
+  useEffect(() => {
+    if (openOnMount) {
+      openChat();
+    }
+  }, [openOnMount, openChat]);
 
   // The brand colour goes on the host element, where it beats the theme's
   // `:root, :host` default and inherits into the shadow tree.

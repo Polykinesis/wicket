@@ -52,9 +52,18 @@ export function useWidgetChat(options: WidgetChatOptions): WidgetChat {
   // The socket controller must exist before `useAgent` runs, and the agent
   // must exist before the controller can act. A ref closes the loop.
   const agentRef = useRef<{ reconnect(): void; close(): void } | null>(null);
+  // The session is written here before `reconnect()` can ask for it, and the
+  // reconnect itself waits a microtask. `useConnection`'s effect (which calls
+  // `open`) runs before `useAgent`'s own effect has pushed the new query into
+  // the socket; a reconnect issued synchronously would carry the previous
+  // token, or none. A microtask runs after the whole effect flush.
+  const sessionRef = useRef<VisitorSession | null>(null);
   const socket = useMemo<SocketController>(
     () => ({
-      open: () => agentRef.current?.reconnect(),
+      open: (session) => {
+        sessionRef.current = session;
+        queueMicrotask(() => agentRef.current?.reconnect());
+      },
       close: () => agentRef.current?.close(),
     }),
     [],
@@ -69,7 +78,6 @@ export function useWidgetChat(options: WidgetChatOptions): WidgetChat {
     ...(initialConfig ? { initialConfig } : {}),
   });
 
-  const sessionRef = useRef<VisitorSession | null>(null);
   sessionRef.current = state.session;
 
   const socketUrl = useMemo(() => client.socketUrl(), [client]);
@@ -81,8 +89,10 @@ export function useWidgetChat(options: WidgetChatOptions): WidgetChat {
     protocol: socketUrl.protocol === "ws:" ? "ws" : "wss",
     startClosed: true,
     maxRetries: 0,
-    // Re-read on every connect, keyed by the token so a fresh session is never
-    // served a cached stale query.
+    // Cached per token (`queryDeps`), so a new session is a new query and a
+    // reconnect with the same session reuses the answer. Not `cacheTtl: 0`:
+    // the hook resolves the query with `use()`, and an always-expired cache
+    // suspends every render.
     query: async () => ({ k: siteKey, t: sessionRef.current?.token ?? null }),
     queryDeps: [state.session?.token ?? null],
     onOpen: () => dispatch({ type: "socket_open" }),

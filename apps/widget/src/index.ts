@@ -1,5 +1,6 @@
 import { isAllowedOrigin } from "@cf-chat/shared";
 import { admitSocket, type GateDeps, mintSession, readConfig } from "./gate.ts";
+import { SOCKET_REFUSED_CODE } from "./socket.ts";
 import { CloudflareTurnstile } from "./turnstile.ts";
 
 /**
@@ -17,7 +18,10 @@ import { CloudflareTurnstile } from "./turnstile.ts";
  * - `GET /chat` upgrades a WebSocket, presenting that token, and forwards to
  *   `app`.
  * - `GET /config` hands the embed the public Turnstile site key it needs before
- *   it can solve anything.
+ *   it can solve anything, plus what the panel says about itself.
+ *
+ * `/embed.js` and `/js/*` are static assets (`wrangler.jsonc`), served before
+ * this code runs for every path not listed in `run_worker_first`.
  *
  * The split between the first two is forced by the browser, not chosen. A
  * `WebSocket` exposes no response headers to JavaScript, so a token minted
@@ -46,9 +50,6 @@ export default {
     if (url.pathname === "/chat") {
       return await chat(deps, request, env);
     }
-    if (url.pathname === "/embed.js") {
-      return embed();
-    }
     if (url.pathname === "/health") {
       const upstream = await env.APP.fetch(new Request(new URL("/api/health", url)));
       return Response.json({
@@ -67,22 +68,16 @@ export default {
  * them enumerate valid site keys by watching the message change, so every path
  * out of here says the same thing.
  */
-function refuse(reason: string, request: Request): Response {
+function refuse(reason: string, request: Request, cors: Headers | null = null): Response {
   console.warn("widget gate refused", { reason, origin: request.headers.get("origin") });
-  return new Response("Not authorised", { status: 403 });
+  // With CORS headers when the origin itself passed: otherwise the browser
+  // hides the 403 behind a CORS error and the embed, seeing only a failed
+  // fetch, retries a refusal it should stop on. An origin that did not pass
+  // gets no headers, by design.
+  return new Response("Not authorised", cors ? { status: 403, headers: cors } : { status: 403 });
 }
 
-/**
- * The socket's refusal. Browsers hide the HTTP status of a failed WebSocket
- * upgrade: a 403 reaches the page as a close with code 1006, the same code as
- * a dropped connection, so the embed could not tell "your token expired" from
- * "the network blipped" and would retry a refusal forever. Completing the
- * handshake and closing with an application code (4403) gives the embed a
- * signal it can read. It carries exactly what the 403 did: refused, no reason.
- * No Durable Object is touched; the pair is closed before anything is routed.
- */
-export const SOCKET_REFUSED_CODE = 4403;
-
+/** See `socket.ts` for why a close code and not a 403. */
 function refuseSocket(reason: string, request: Request): Response {
   console.warn("widget gate refused", { reason, origin: request.headers.get("origin") });
   const pair = new WebSocketPair();
@@ -134,7 +129,7 @@ async function config(deps: GateDeps, request: Request): Promise<Response> {
   }
   const found = await readConfig(deps, new URL(request.url).searchParams.get("k"));
   if (!found.ok) {
-    return refuse(found.refusal, request);
+    return refuse(found.refusal, request, headers);
   }
   const { turnstileSiteKey, scope, brandColor } = found.value.config;
   headers.set("content-type", "application/json");
@@ -172,7 +167,7 @@ async function session(deps: GateDeps, request: Request): Promise<Response> {
 
   const minted = await mintSession(deps, request, turnstileToken);
   if (!minted.ok) {
-    return refuse(minted.refusal, request);
+    return refuse(minted.refusal, request, headers);
   }
 
   headers.set("content-type", "application/json");
@@ -206,35 +201,14 @@ async function chat(deps: GateDeps, request: Request, env: Env): Promise<Respons
     return refuseSocket(admitted.refusal, request);
   }
 
-  const target = new URL(
-    `/agents/conversation/${encodeURIComponent(admitted.value.agentName)}`,
-    url,
-  );
+  // Not percent-encoded: the name is `uuid:uuid`, every character of which is
+  // legal in a path segment, and the Agents router takes the segment as the
+  // Durable Object's name verbatim. Encoding the colon made the object's name
+  // `…%3A…`, which `parseConversationAgentName` rightly refused.
+  const target = new URL(`/agents/conversation/${admitted.value.agentName}`, url);
   const forwarded = new Request(target, request);
   // Header, not query string: `app` reads the credential from somewhere the
   // browser could not have written even if it reached `app` directly.
   forwarded.headers.set("x-cf-chat-visitor-token", url.searchParams.get("t") ?? "");
   return await env.APP.fetch(forwarded);
-}
-
-/**
- * Placeholder until build step 5's `packages/widget-ui` lands.
- *
- * The loader stays deliberately tiny: it is the only thing a customer's page
- * pays for until a visitor actually opens the panel, which is what keeps the
- * React bundle off every page view (ADR-015).
- */
-function embed(): Response {
-  return new Response(
-    `(() => {
-  console.info("cf-chat widget: gates are live, UI lands with packages/widget-ui");
-})();
-`,
-    {
-      headers: {
-        "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "public, max-age=300",
-      },
-    },
-  );
 }

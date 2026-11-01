@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build:css": "tailwindcss -i ./src/styles.css -o ./dist/widget.css --minify && node scripts/shadow-css.cli.ts dist/widget.css",
-    "build": "pnpm build:css",
+    "build:js": "node scripts/build.ts",
+    "build": "pnpm build:css && pnpm build:js",
     "preview": "pnpm build:css && esbuild preview/main.tsx --bundle --format=esm --platform=browser --target=es2022 --jsx=automatic --loader:.css=text --outdir=preview/dist --servedir=preview --serve=127.0.0.1:8790"
   },
   "dependencies": {

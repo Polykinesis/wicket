@@ -4,16 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run --outdir dist",
+    "assets": "mkdir -p public/js && rm -f public/js/* && cp ../../packages/widget-ui/dist/js/* public/js/ && cp ../../packages/widget-ui/dist/embed.js ../../packages/widget-ui/dist/embed.js.map ../../packages/widget-ui/dist/manifest.json public/ && cp assets/_headers public/_headers",
+    "dev": "pnpm assets && wrangler dev",
+    "build": "pnpm assets && wrangler deploy --dry-run --outdir dist",
     "typecheck": "tsc --noEmit",
-    "cf-typegen": "wrangler types",
-    "deploy": "wrangler deploy"
+    "cf-typegen": "WRANGLER_SEND_METRICS=false wrangler types",
+    "deploy": "pnpm assets && wrangler deploy",
+    "seed:dev": "node scripts/seed-dev-config.ts",
+    "test-host": "python3 -m http.server 8790 --bind 127.0.0.1 --directory test-host"
   },
   "dependencies": {
     "@cf-chat/shared": "workspace:*"
   },
   "devDependencies": {
+    "@cf-chat/widget-ui": "workspace:*",
     "@cloudflare/vitest-pool-workers": "0.22.0",
     "vitest": "4.1.11",
     "wrangler": "4.128.0"
