@@ -17,7 +17,7 @@ import { countPropertyRules } from "../scripts/shadow-css.ts";
 import type { LauncherVariant } from "../src/components/Panel.tsx";
 import { Shell } from "../src/embed/Shell.tsx";
 import type { HandoffError, SubmitHandoff } from "../src/handoff.ts";
-import type { ScopeView } from "../src/scope.ts";
+import type { WidgetScope } from "../src/scope.ts";
 import { deriveTurn, type TurnView } from "../src/turn.ts";
 import { Widget } from "../src/Widget.tsx";
 import {
@@ -124,7 +124,7 @@ const SCOPES = {
   small: { ...SCOPE, documentCount: 5 },
   no_questions: { ...SCOPE, suggestedQuestions: undefined },
   bare: { tenantName: "Acme" },
-} satisfies Record<string, ScopeView>;
+} satisfies Record<string, WidgetScope>;
 
 const LAUNCHERS = { labelled: "labelled", icon: "icon" } satisfies Record<string, LauncherVariant>;
 

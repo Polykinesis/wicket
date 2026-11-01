@@ -6,11 +6,11 @@ import { Launcher, type LauncherVariant, Panel } from "./components/Panel.tsx";
 import { GapNotice, HandoffSent } from "./components/states.tsx";
 import { TurnBlock } from "./components/TurnBlock.tsx";
 import type { HandoffReceipt, SubmitHandoff } from "./handoff.ts";
-import { handoffRecipient, launcherLabel, type ScopeView, scopeLine } from "./scope.ts";
+import { handoffRecipient, launcherLabel, scopeLine, type WidgetScope } from "./scope.ts";
 import type { TurnKind, TurnView } from "./turn.ts";
 
 export interface WidgetProps {
-  readonly scope: ScopeView;
+  readonly scope: WidgetScope;
   /** From `buildTurns(messages, status)`. */
   readonly turns: readonly TurnView[];
   readonly open: boolean;

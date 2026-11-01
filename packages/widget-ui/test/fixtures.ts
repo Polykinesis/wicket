@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { ScopeView } from "../src/scope.ts";
+import type { WidgetScope } from "../src/scope.ts";
 
 /**
  * Message builders shaped like what `Conversation.onChatMessage` writes, in the
@@ -67,7 +67,7 @@ export function richCitation(
 
 export const NOW = new Date("2026-11-01T12:00:00Z");
 
-export const SCOPE: ScopeView = {
+export const SCOPE: WidgetScope = {
   tenantName: "Northwind Rota",
   documentCount: 42,
   updatedAt: "2026-10-30T12:00:00Z",

@@ -1,29 +1,12 @@
-import { z } from "zod";
+import type { WidgetScope } from "@cf-chat/shared/widget";
 
-/**
- * What the widget knows about its own knowledge, for the header and the empty
- * state. Proves "answers only from what you published" instead of claiming it.
- *
- * Arrives with the widget config (KV, stale-tolerant), not from the agent.
- * Everything except the tenant name is optional because none of it exists in
- * `WidgetConfig` yet; each missing field hides its piece of UI rather than
- * showing a placeholder.
+export type { WidgetScope };
+
+/*
+ * Copy derived from `WidgetScope`: the header line, the launcher label and who
+ * a handoff goes to. The schema itself lives in `@cf-chat/shared/widget`,
+ * because the `widget` Worker and the dashboard validate the same shape.
  */
-export const scopeViewSchema = z.object({
-  tenantName: z.string().min(1).max(80),
-  /** Ready sources. Counted as documents until website ingestion exists. */
-  documentCount: z.number().int().nonnegative().optional(),
-  /** ISO timestamp of the most recent successful index. */
-  updatedAt: z.iso.datetime({ offset: true }).optional(),
-  topics: z.array(z.string().min(1).max(32)).max(8).optional(),
-  /** Real top-asked questions. Absent until a tenant has enough of them. */
-  suggestedQuestions: z.array(z.string().min(1).max(140)).max(5).optional(),
-  /** Who a handoff goes to, as the visitor should read it: "Sam", "the team". */
-  ownerName: z.string().min(1).max(60).optional(),
-  /** Free text such as "within 4 hours". Never computed, so never wrong. */
-  replyTime: z.string().min(1).max(60).optional(),
-});
-export type ScopeView = z.infer<typeof scopeViewSchema>;
 
 /** Below this, a count reads as thin rather than as proof. A guess; revisit. */
 export const SMALL_SITE_THRESHOLD = 10;
@@ -35,7 +18,7 @@ const LAUNCHER_TOPICS = 3;
  * The header line under the title. `null` when there is nothing true to say,
  * in which case the header shows the title alone.
  */
-export function scopeLine(scope: ScopeView, now: Date): string | null {
+export function scopeLine(scope: WidgetScope, now: Date): string | null {
   const updated = scope.updatedAt ? relativeTime(new Date(scope.updatedAt), now) : null;
   const count = scope.documentCount;
 
@@ -52,7 +35,7 @@ export function scopeLine(scope: ScopeView, now: Date): string | null {
   return what;
 }
 
-export function launcherLabel(scope: ScopeView): string {
+export function launcherLabel(scope: WidgetScope): string {
   const topics = scope.topics?.slice(0, LAUNCHER_TOPICS) ?? [];
   if (topics.length === 0) {
     return "Ask a question";
@@ -60,7 +43,7 @@ export function launcherLabel(scope: ScopeView): string {
   return `Ask about ${joinList(topics.map((topic) => topic.toLowerCase()))}`;
 }
 
-export function handoffRecipient(scope: ScopeView): string {
+export function handoffRecipient(scope: WidgetScope): string {
   return scope.ownerName ?? `the ${scope.tenantName} team`;
 }
 

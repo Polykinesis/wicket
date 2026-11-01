@@ -1,6 +1,6 @@
 import { type ReactElement, type Ref, useState } from "react";
 import type { HandoffReceipt, SubmitHandoff } from "../handoff.ts";
-import { handoffRecipient, type ScopeView } from "../scope.ts";
+import { handoffRecipient, type WidgetScope } from "../scope.ts";
 import type { TurnView } from "../turn.ts";
 import { AnswerCard } from "./AnswerCard.tsx";
 import { HandoffForm } from "./HandoffForm.tsx";
@@ -28,7 +28,7 @@ export function TurnBlock({
   ref,
 }: {
   readonly turn: TurnView;
-  readonly scope: ScopeView;
+  readonly scope: WidgetScope;
   readonly now: Date;
   readonly onSubmitHandoff: SubmitHandoff;
   /** Set on the newest turn so the panel can scroll it into view. */

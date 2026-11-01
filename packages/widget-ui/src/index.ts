@@ -1,3 +1,4 @@
+export { type WidgetScope, widgetScopeSchema } from "@cf-chat/shared/widget";
 export type { LauncherVariant } from "./components/Panel.tsx";
 export { Shell } from "./embed/Shell.tsx";
 export {
@@ -18,6 +19,5 @@ export {
   type SourcesData,
   sourcesDataSchema,
 } from "./parts.ts";
-export { type ScopeView, scopeViewSchema } from "./scope.ts";
 export { buildTurns, deriveTurn, type TurnKind, type TurnView } from "./turn.ts";
 export { Widget, type WidgetProps } from "./Widget.tsx";

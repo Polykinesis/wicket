@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fragmentLink } from "../src/components/SourceExcerpt.tsx";
 import type { SubmitHandoff } from "../src/handoff.ts";
-import { type ScopeView, scopeLine } from "../src/scope.ts";
+import { scopeLine, type WidgetScope } from "../src/scope.ts";
 import { deriveTurn, type TurnView } from "../src/turn.ts";
 import { Widget, type WidgetProps } from "../src/Widget.tsx";
 import {
@@ -87,7 +87,7 @@ describe("scope line", () => {
   });
 
   it("names the tenant instead of counting on a small site", () => {
-    const small: ScopeView = { ...SCOPE, documentCount: 5 };
+    const small: WidgetScope = { ...SCOPE, documentCount: 5 };
     expect(scopeLine(small, NOW)).toBe(
       "Answers from Northwind Rota's published help content, updated 2 days ago",
     );

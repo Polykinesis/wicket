@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { ScopeView } from "../scope.ts";
+import type { WidgetScope } from "../scope.ts";
 import { SuggestionButton } from "./states.tsx";
 
 /**
@@ -11,7 +11,7 @@ export function EmptyState({
   scope,
   onAsk,
 }: {
-  readonly scope: ScopeView;
+  readonly scope: WidgetScope;
   readonly onAsk: (question: string) => void;
 }): ReactElement | null {
   const topics = scope.topics ?? [];

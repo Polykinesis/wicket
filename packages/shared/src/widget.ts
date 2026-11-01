@@ -28,7 +28,41 @@ export function newWidgetSiteKey(): WidgetSiteKey {
 }
 
 /**
- * What the `widget` Worker needs to decide whether to mint a visitor token.
+ * What the widget knows about its own knowledge, for the header and the empty
+ * state. Proves "answers only from what you published" instead of claiming it.
+ *
+ * Everything except the tenant name is optional, and each missing field hides
+ * its piece of UI rather than showing a placeholder. `documentCount` and
+ * `updatedAt` are computed from the sources table when the config is
+ * projected; the rest is set by the tenant in settings.
+ */
+export const widgetScopeSchema = z.object({
+  tenantName: z.string().min(1).max(80),
+  /** Ready sources. Counted as documents until website ingestion exists. */
+  documentCount: z.number().int().nonnegative().optional(),
+  /** ISO timestamp of the most recent successful index. */
+  updatedAt: z.iso.datetime({ offset: true }).optional(),
+  topics: z.array(z.string().min(1).max(32)).max(8).optional(),
+  /** Real top-asked questions. Absent until a tenant has enough of them. */
+  suggestedQuestions: z.array(z.string().min(1).max(140)).max(5).optional(),
+  /** Who a handoff goes to, as the visitor should read it: "Sam", "the team". */
+  ownerName: z.string().min(1).max(60).optional(),
+  /** Free text such as "within 4 hours". Never computed, so never wrong. */
+  replyTime: z.string().min(1).max(60).optional(),
+});
+export type WidgetScope = z.infer<typeof widgetScopeSchema>;
+
+/**
+ * Six-digit hex only. Shorthand, named colours and functional notation are
+ * refused because this value lands in a `style` attribute on a stranger's page
+ * and a strict grammar is the cheapest way to keep it inert.
+ */
+export const brandColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+/**
+ * Everything the `widget` Worker and the embed need per site key: the gate
+ * (origins, Turnstile), what the panel says about itself (`scope`) and the one
+ * white-label dial (`brandColor`).
  *
  * Lives in KV, which `CLAUDE.md` sanctions for widget config specifically. The
  * no-read-after-write rule applies with teeth here: a tenant who adds an origin
@@ -45,12 +79,17 @@ export interface WidgetConfig {
   readonly origins: readonly string[];
   /** Public Turnstile site key, rendered by the embed. Not the secret. */
   readonly turnstileSiteKey: string;
+  readonly scope: WidgetScope;
+  /** Absent means the stylesheet's default. The text colour on it is derived at mount. */
+  readonly brandColor?: string | undefined;
 }
 
 export const widgetConfigSchema = z.object({
   tenantId: tenantIdSchema,
   origins: z.array(z.string().min(1)).max(50),
   turnstileSiteKey: z.string().min(1),
+  scope: widgetScopeSchema,
+  brandColor: brandColorSchema.optional(),
 });
 
 export const widgetConfigKvKey = (siteKey: WidgetSiteKey): string => `widget:${siteKey}`;

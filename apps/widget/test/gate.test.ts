@@ -30,6 +30,7 @@ async function seed(overrides: Partial<WidgetConfig> = {}): Promise<WidgetSiteKe
     tenantId,
     origins: [ORIGIN],
     turnstileSiteKey: "0x-public-site-key",
+    scope: { tenantName: "Acme" },
     ...overrides,
   };
   await env.KV.put(widgetConfigKvKey(key), JSON.stringify(config));
