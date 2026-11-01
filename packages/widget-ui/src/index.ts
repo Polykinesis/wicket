@@ -1,4 +1,5 @@
 export type { LauncherVariant } from "./components/Panel.tsx";
+export { Shell } from "./embed/Shell.tsx";
 export {
   type HandoffError,
   type HandoffField,

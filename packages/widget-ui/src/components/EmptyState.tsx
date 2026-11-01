@@ -30,17 +30,16 @@ export function EmptyState({
           {/*
             A plain list, not pills: a bordered pill reads as a button, and
             these are a statement of coverage, not a filter. The separator is
-            decorative, so it is hidden from assistive tech, which already
-            announces the list items one by one.
+            generated content on the preceding item, so a wrapped line ends
+            with it rather than starting with one, and assistive tech, which
+            already announces list items one by one, never hears it.
           */}
-          <ul className="flex flex-wrap gap-x-1 gap-y-1 text-[15px] text-ink-2">
-            {topics.map((topic, index) => (
-              <li key={topic} className="flex items-center gap-1">
-                {index > 0 ? (
-                  <span aria-hidden="true" className="text-ink-3">
-                    &middot;
-                  </span>
-                ) : null}
+          <ul className="flex flex-wrap gap-1 text-[15px] text-ink-2">
+            {topics.map((topic) => (
+              <li
+                key={topic}
+                className="after:ml-1 after:text-ink-3 after:content-['·'] last:after:content-none"
+              >
                 {topic}
               </li>
             ))}

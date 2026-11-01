@@ -13,6 +13,7 @@ import { err, ok } from "@cf-chat/shared/result";
 import { type ReactElement, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import css from "../dist/widget.css?raw";
+import { countPropertyRules } from "../scripts/shadow-css.ts";
 import type { LauncherVariant } from "../src/components/Panel.tsx";
 import { Shell } from "../src/embed/Shell.tsx";
 import type { HandoffError, SubmitHandoff } from "../src/handoff.ts";
@@ -238,10 +239,14 @@ function mount(): void {
     </StrictMode>,
   );
 
-  // Browsers ignore @property inside a shadow root. Zero is the target; any
-  // other number names a utility that will not render as Tailwind intends.
-  const registered = css.match(/@property/g)?.length ?? 0;
-  console.info(`widget.css: ${registered} @property rule(s), ${css.length} bytes`);
+  // Browsers ignore @property inside a shadow root, so the rules themselves
+  // are inert here; what matters is that the build left Tailwind's fallback
+  // block ungated. See scripts/shadow-css.ts.
+  const ungated = /@layer properties\{\*,/.test(css);
+  console.info(
+    `widget.css: ${css.length} bytes, ${countPropertyRules(css)} inert @property rule(s), ` +
+      `fallback ${ungated ? "ungated" : "STILL GATED: borders and shadows will be missing"}`,
+  );
 }
 
 mount();
