@@ -27,12 +27,20 @@ export function EmptyState({
           <h3 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">
             What it knows about
           </h3>
-          <ul className="flex flex-wrap gap-2">
-            {topics.map((topic) => (
-              <li
-                key={topic}
-                className="rounded-full border border-line px-3 py-1.5 text-[13px] text-ink-2"
-              >
+          {/*
+            A plain list, not pills: a bordered pill reads as a button, and
+            these are a statement of coverage, not a filter. The separator is
+            decorative, so it is hidden from assistive tech, which already
+            announces the list items one by one.
+          */}
+          <ul className="flex flex-wrap gap-x-1 gap-y-1 text-[15px] text-ink-2">
+            {topics.map((topic, index) => (
+              <li key={topic} className="flex items-center gap-1">
+                {index > 0 ? (
+                  <span aria-hidden="true" className="text-ink-3">
+                    &middot;
+                  </span>
+                ) : null}
                 {topic}
               </li>
             ))}

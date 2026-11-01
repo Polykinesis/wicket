@@ -1,8 +1,8 @@
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer.tsx";
 import { EmptyState } from "./components/EmptyState.tsx";
 import { HandoffForm } from "./components/HandoffForm.tsx";
-import { Launcher, Panel } from "./components/Panel.tsx";
+import { Launcher, type LauncherVariant, Panel } from "./components/Panel.tsx";
 import { GapNotice, HandoffSent } from "./components/states.tsx";
 import { TurnBlock } from "./components/TurnBlock.tsx";
 import type { HandoffReceipt, SubmitHandoff } from "./handoff.ts";
@@ -17,6 +17,8 @@ export interface WidgetProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly onAsk: (question: string) => void;
   readonly onSubmitHandoff: SubmitHandoff;
+  /** Icon-only launcher for crowded host corners. Labelled by default. */
+  readonly launcher?: LauncherVariant;
   /** Injected for tests and so relative dates agree with the server's clock. */
   readonly now?: Date;
 }
@@ -40,12 +42,39 @@ export function Widget({
   onOpenChange,
   onAsk,
   onSubmitHandoff,
+  launcher = "labelled",
   now = new Date(),
 }: WidgetProps): ReactElement {
   const [direct, setDirect] = useState<Direct>({ phase: "closed" });
 
+  // Whether the panel has ever been open. The launcher takes focus only when
+  // it reappears after a close, never when the widget first mounts.
+  const everOpened = useRef(open);
+  useEffect(() => {
+    if (open) {
+      everOpened.current = true;
+    }
+  }, [open]);
+
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const latestRef = useRef<HTMLDivElement>(null);
+  const turnCount = turns.length;
+  useEffect(() => {
+    if (turnCount === 0) {
+      return;
+    }
+    scrollToLatest(bodyRef.current, latestRef.current);
+  }, [turnCount]);
+
   if (!open) {
-    return <Launcher label={launcherLabel(scope)} onOpen={() => onOpenChange(true)} />;
+    return (
+      <Launcher
+        label={launcherLabel(scope)}
+        variant={launcher}
+        focusOnMount={everOpened.current}
+        onOpen={() => onOpenChange(true)}
+      />
+    );
   }
 
   const last = turns.at(-1);
@@ -57,6 +86,7 @@ export function Widget({
       title={`Ask ${scope.tenantName}`}
       scopeLine={scopeLine(scope, now)}
       onClose={() => onOpenChange(false)}
+      bodyRef={bodyRef}
       footer={
         <Composer
           tenantName={scope.tenantName}
@@ -74,6 +104,7 @@ export function Widget({
           // Turns are append-only and never reorder, so position is identity.
           // biome-ignore lint/suspicious/noArrayIndexKey: see above
           key={index}
+          ref={index === turns.length - 1 ? latestRef : undefined}
           turn={turn}
           scope={scope}
           now={now}
@@ -100,6 +131,29 @@ export function Widget({
       </p>
     </Panel>
   );
+}
+
+/**
+ * Bring the newest turn to the top of the panel body, so the visitor sees
+ * their question and the answer fills in below it. Done on the scroller
+ * directly rather than with `scrollIntoView`, which also aligns every
+ * scrolling ancestor including the window and jumps the host page under a
+ * fixed panel.
+ */
+function scrollToLatest(scroller: HTMLDivElement | null, latest: HTMLDivElement | null): void {
+  if (!scroller || !latest) {
+    return;
+  }
+  const top =
+    latest.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+  const reduceMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (typeof scroller.scrollTo === "function") {
+    scroller.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+  } else {
+    scroller.scrollTop = top;
+  }
 }
 
 /**

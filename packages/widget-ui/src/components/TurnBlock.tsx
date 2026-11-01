@@ -1,4 +1,4 @@
-import { type ReactElement, useState } from "react";
+import { type ReactElement, type Ref, useState } from "react";
 import type { HandoffReceipt, SubmitHandoff } from "../handoff.ts";
 import { handoffRecipient, type ScopeView } from "../scope.ts";
 import type { TurnView } from "../turn.ts";
@@ -25,11 +25,14 @@ export function TurnBlock({
   scope,
   now,
   onSubmitHandoff,
+  ref,
 }: {
   readonly turn: TurnView;
   readonly scope: ScopeView;
   readonly now: Date;
   readonly onSubmitHandoff: SubmitHandoff;
+  /** Set on the newest turn so the panel can scroll it into view. */
+  readonly ref?: Ref<HTMLDivElement> | undefined;
 }): ReactElement {
   const [handoff, setHandoff] = useState<Handoff>({ phase: "untouched" });
   // Partial answers only offer the form; the visitor already has most of what
@@ -54,7 +57,7 @@ export function TurnBlock({
     );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={ref} className="flex flex-col gap-4">
       <Question text={turn.question} />
       {body()}
     </div>

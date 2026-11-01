@@ -40,7 +40,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-line px-3 pt-2.5 pb-3">
+    <div className="border-t border-line px-3 pt-2.5 pb-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <form className="flex items-end gap-2" onSubmit={send}>
         <label htmlFor={id} className="sr-only">
           Ask a question
@@ -64,12 +64,13 @@ export function Composer({
           <SendIcon />
         </button>
       </form>
-      <div className="mt-2 flex justify-between gap-2 text-xs text-ink-3">
+      {/* Side by side when it fits; at phone width the line stacks rather than wrapping mid-sentence beside the button. */}
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-ink-3 max-sm:flex-col max-sm:items-start max-sm:gap-0.5">
         <span>Only uses what {tenantName} has published</span>
         <button
           type="button"
           onClick={onTalkToPerson}
-          className="shrink-0 py-1 font-semibold text-brand underline underline-offset-2"
+          className="shrink-0 py-1 font-semibold text-brand underline underline-offset-2 max-sm:min-h-11"
         >
           Talk to a person
         </button>
