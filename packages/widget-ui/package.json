@@ -9,8 +9,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build:css": "tailwindcss -i ./src/styles.css -o ./dist/widget.css --minify",
-    "build": "pnpm build:css"
+    "build:css": "tailwindcss -i ./src/styles.css -o ./dist/widget.css --minify && node scripts/shadow-css.cli.ts dist/widget.css",
+    "build": "pnpm build:css",
+    "preview": "pnpm build:css && esbuild preview/main.tsx --bundle --format=esm --platform=browser --target=es2022 --jsx=automatic --loader:.css=text --outdir=preview/dist --servedir=preview --serve=127.0.0.1:8790"
   },
   "dependencies": {
     "@cf-chat/shared": "workspace:*",
@@ -27,6 +28,7 @@
     "@testing-library/react": "16.3.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.4",
+    "esbuild": "0.28.2",
     "happy-dom": "20.0.11",
     "tailwindcss": "4.3.3",
     "vite": "8.2.2",

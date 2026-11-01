@@ -7,11 +7,21 @@
  * imported separately. Preflight is kept: inside a shadow root it resets only
  * the widget, never the host page.
  *
- * Shadow DOM caveat (unverified until the embed mounts): browsers ignore
- * `@property` inside a shadow root, and Tailwind's shadow, ring and transform
- * utilities register their variables that way. The components avoid ring-*
- * utilities and use plain `outline` for focus, and use only the `shadow-panel`
- * token below, which does not depend on a registered property.
+ * Shadow DOM, two facts verified in the Phase 0 harness (Chrome 156):
+ *
+ * 1. `@property` is ignored inside a shadow root, and Tailwind registers every
+ *    `--tw-*` variable that way: border style, shadows, gradients, transforms.
+ *    `scripts/shadow-css.ts` post-processes the build so Tailwind's own
+ *    fallback block applies unconditionally. Nothing in the components needs
+ *    to avoid those utilities, but focus stays an `outline` because a ring is
+ *    a shadow and a shadow is the wrong tool for focus anyway.
+ *
+ * 2. Host-page rules that match the host element itself (`* { font-family }`,
+ *    `#id { color }`) beat `:host` and inherit into the tree. `.widget-root`
+ *    below is the boundary: `all: initial` on the mount container stops every
+ *    inherited property at the door, then the base typography is declared
+ *    again on it. Custom properties are not reset by `all`, so theme tokens
+ *    still flow down from `:host`.
  */
 @layer theme, base, components, utilities;
 
@@ -47,6 +57,7 @@
   --shadow-panel: 0 12px 40px rgb(15 30 25 / 0.18), 0 2px 6px rgb(15 30 25 / 0.08);
 
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-rise: rise 160ms ease-out;
 
   @keyframes shimmer {
     from {
@@ -56,13 +67,41 @@
       background-position: -200% 0;
     }
   }
+
+  /* Panel entrance. Only ever applied under `motion-safe:`. */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
-  :host {
+  /*
+   * The inheritance boundary. The embed puts this class on the element it
+   * renders into, directly under the shadow root. `all: initial` resets every
+   * inheritable property the host page could have pushed through the host
+   * element; what follows re-declares the base typography that Preflight puts
+   * on `html, :host`, which does not survive that reset.
+   */
+  .widget-root {
+    all: initial;
+    display: block;
     font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    font-feature-settings: normal;
+    font-variation-settings: normal;
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    tab-size: 4;
   }
 
   /* Focus is an outline, not a ring: see the Shadow DOM caveat above. */

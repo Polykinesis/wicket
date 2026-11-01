@@ -8,5 +8,5 @@
     // either would be a design mistake this makes visible at compile time.
     "types": ["vite/client"]
   },
-  "include": ["src", "test"]
+  "include": ["src", "test", "preview", "scripts"]
 }
