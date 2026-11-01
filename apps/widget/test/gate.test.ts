@@ -129,6 +129,25 @@ describe("mintSession", () => {
     });
   });
 
+  it("requires the challenge to have been solved on the page that is asking", async () => {
+    const onThisSite = deps(new FixtureTurnstile(true, "acme.example.com"));
+    expect((await mintSession(onThisSite, request("/session", siteKey), "t")).ok).toBe(true);
+
+    // Both origins allowlisted, token solved on one, presented from the other.
+    const two = await seed({ origins: [ORIGIN, "https://help.acme.example.com"] });
+    const elsewhere = deps(new FixtureTurnstile(true, "help.acme.example.com"));
+    expect(await mintSession(elsewhere, request("/session", two), "t")).toEqual({
+      ok: false,
+      refusal: "turnstile_failed",
+    });
+
+    // A response without a hostname still passes; only a contradicting one fails.
+    expect(
+      (await mintSession(deps(new FixtureTurnstile(true, null)), request("/session", siteKey), "t"))
+        .ok,
+    ).toBe(true);
+  });
+
   it("refuses a missing Turnstile token without calling siteverify", async () => {
     const turnstile = new FixtureTurnstile(true);
     expect(await mintSession(deps(turnstile), request("/session", siteKey), null)).toEqual({

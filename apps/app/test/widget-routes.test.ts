@@ -82,21 +82,21 @@ describe("widget routes: gates before the database", () => {
 
   it("refuses origins that are not https origins", async () => {
     for (const origin of ["acme.com", "http://acme.example.com", "ftp://acme.example.com", ""]) {
-      const response = await call("POST", "/sites", {
-        origins: [origin],
-        turnstileSiteKey: "0x-public",
-      });
+      const response = await call("POST", "/sites", { origins: [origin] });
       expect(response.status, origin).toBe(400);
     }
   });
 
-  it("refuses an empty origin list and a missing Turnstile key", async () => {
-    expect(
-      (await call("POST", "/sites", { origins: [], turnstileSiteKey: "0x-public" })).status,
-    ).toBe(400);
-    expect((await call("POST", "/sites", { origins: ["https://acme.example.com"] })).status).toBe(
-      400,
-    );
+  it("refuses an empty origin list and ignores a tenant-supplied Turnstile key", async () => {
+    expect((await call("POST", "/sites", { origins: [] })).status).toBe(400);
+    // Not a validation error: the field is simply not part of the contract.
+    // The request then reaches Neon, which the pool cannot emulate, so the
+    // only thing to assert here is that validation did not refuse it.
+    const response = await call("POST", "/sites", {
+      origins: ["https://acme.example.com"],
+      turnstileSiteKey: "0x-attacker",
+    });
+    expect(response.status).not.toBe(400);
   });
 
   it("treats a malformed site key in the path as not found, not as a hint", async () => {

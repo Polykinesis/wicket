@@ -77,7 +77,12 @@ export interface WidgetConfig {
    * rule written for `acme.com`, and suffix checks are how that happens.
    */
   readonly origins: readonly string[];
-  /** Public Turnstile site key, rendered by the embed. Not the secret. */
+  /**
+   * Public Turnstile site key, rendered by the embed. Platform-owned and
+   * platform-assigned: siteverify needs the secret paired with this key, and
+   * that secret is the widget Worker's. Per site rather than global so a
+   * pool of widgets can be allocated once one widget's hostname limit fills.
+   */
   readonly turnstileSiteKey: string;
   readonly scope: WidgetScope;
   /** Absent means the stylesheet's default. The text colour on it is derived at mount. */

@@ -51,6 +51,25 @@ describe("first contact", () => {
     expect(opened.step).toEqual({ kind: "verifying", reason: "first" });
   });
 
+  it("starts configured when the loader already fetched config", () => {
+    const stored = session();
+    const state = reduce(INITIAL, {
+      type: "start",
+      preloaded: { config: CONFIG, stored, now: NOW },
+    });
+    expect(state.step).toEqual({ kind: "configured" });
+    expect(state.config).toEqual(CONFIG);
+    expect(state.session).toBe(stored);
+    expect(nextAction(state)).toEqual({ kind: "none" });
+    expect(reduce(state, { type: "open" }).step).toEqual({ kind: "connecting", fresh: false });
+
+    const aged = reduce(INITIAL, {
+      type: "start",
+      preloaded: { config: CONFIG, stored: session(NOW + 10), now: NOW },
+    });
+    expect(aged.session).toBeNull();
+  });
+
   it("remembers an open that arrives before config does", () => {
     const eager = run([{ type: "start" }, { type: "open" }]);
     expect(eager.step).toEqual({ kind: "loading_config", openRequested: true });

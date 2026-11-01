@@ -7,9 +7,20 @@
  * would have to reach `challenges.cloudflare.com`, which would make the gate
  * effectively untested.
  */
+
+/**
+ * What siteverify said. `hostname` is the page the challenge was solved on,
+ * as Turnstile saw it; the gate compares it with the request's Origin so a
+ * token solved on one allowlisted site cannot be presented from another.
+ * Null only when the response carried none, which the fixture uses.
+ */
+export type TurnstileOutcome =
+  | { readonly solved: true; readonly hostname: string | null }
+  | { readonly solved: false };
+
 export interface TurnstileVerifier {
-  /** True when the token is a genuine, unspent solve for this site. */
-  verify(token: string, remoteIp: string | null): Promise<boolean>;
+  /** Whether the token is a genuine, unspent solve for this site, and where it was solved. */
+  verify(token: string, remoteIp: string | null): Promise<TurnstileOutcome>;
 }
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -22,7 +33,7 @@ export class CloudflareTurnstile implements TurnstileVerifier {
     this.#secret = secret;
   }
 
-  async verify(token: string, remoteIp: string | null): Promise<boolean> {
+  async verify(token: string, remoteIp: string | null): Promise<TurnstileOutcome> {
     const body = new FormData();
     body.append("secret", this.#secret);
     body.append("response", token);
@@ -33,20 +44,23 @@ export class CloudflareTurnstile implements TurnstileVerifier {
     try {
       const response = await fetch(SITEVERIFY_URL, { method: "POST", body });
       if (!response.ok) {
-        return false;
+        return { solved: false };
       }
       const outcome: unknown = await response.json();
-      return (
-        typeof outcome === "object" &&
-        outcome !== null &&
-        (outcome as { success?: unknown }).success === true
-      );
+      if (typeof outcome !== "object" || outcome === null) {
+        return { solved: false };
+      }
+      const { success, hostname } = outcome as { success?: unknown; hostname?: unknown };
+      if (success !== true) {
+        return { solved: false };
+      }
+      return { solved: true, hostname: typeof hostname === "string" ? hostname : null };
     } catch (cause) {
       // Fail closed. An unreachable siteverify is indistinguishable from one
       // that would have refused, and this gate is the reason the visitor token
       // means anything (ADR-016).
       console.error("Turnstile siteverify failed", cause);
-      return false;
+      return { solved: false };
     }
   }
 }
@@ -54,14 +68,14 @@ export class CloudflareTurnstile implements TurnstileVerifier {
 /** Answers however it was told to, so a test can assert both sides of the gate. */
 export class FixtureTurnstile implements TurnstileVerifier {
   readonly seen: { token: string; remoteIp: string | null }[] = [];
-  #result: boolean;
+  readonly #outcome: TurnstileOutcome;
 
-  constructor(result = true) {
-    this.#result = result;
+  constructor(solved = true, hostname: string | null = null) {
+    this.#outcome = solved ? { solved: true, hostname } : { solved: false };
   }
 
-  async verify(token: string, remoteIp: string | null): Promise<boolean> {
+  async verify(token: string, remoteIp: string | null): Promise<TurnstileOutcome> {
     this.seen.push({ token, remoteIp });
-    return this.#result;
+    return this.#outcome;
   }
 }

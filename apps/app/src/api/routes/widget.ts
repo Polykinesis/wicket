@@ -83,10 +83,14 @@ const settingsInput = z.object({
   brandColor: brandColorSchema.nullable(),
 });
 
-const newSiteInput = z.object({
-  origins: originsInput,
-  turnstileSiteKey: z.string().trim().min(1).max(100),
-});
+/**
+ * Tenants do not bring a Turnstile key. Siteverify needs the secret paired
+ * with the site key and that secret is the platform's, so the key is ours
+ * too: one widget for now, a pool allocated per site once the free plan's
+ * ten hostnames per widget run out. Hostnames are registered on the widget
+ * when an origin is added (manual for the PoC, the Turnstile API later).
+ */
+const newSiteInput = z.object({ origins: originsInput });
 
 const siteOriginsInput = z.object({ origins: originsInput });
 
@@ -152,7 +156,7 @@ widget.post("/sites", requireSession, async (c) => {
         id: crypto.randomUUID(),
         siteKey: newWidgetSiteKey(),
         origins: input.origins,
-        turnstileSiteKey: input.turnstileSiteKey,
+        turnstileSiteKey: env.TURNSTILE_SITE_KEY,
       }),
     ),
   );

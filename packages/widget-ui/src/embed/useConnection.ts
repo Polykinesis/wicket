@@ -1,4 +1,4 @@
-import type { VisitorSession } from "@cf-chat/shared/widget";
+import type { VisitorSession, WidgetPublicConfig } from "@cf-chat/shared/widget";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { WidgetClient } from "./client.ts";
 import {
@@ -27,6 +27,11 @@ export interface ConnectionDeps {
   /** The light-DOM element Turnstile renders into. Resolved late: it may not exist at mount. */
   readonly turnstileContainer: () => HTMLElement;
   readonly socket: SocketController;
+  /**
+   * Config the loader already fetched to draw the launcher. Skips the fetch
+   * here; the machine starts configured.
+   */
+  readonly initialConfig?: WidgetPublicConfig;
   /** Unix seconds. Injected for tests. */
   readonly now?: () => number;
 }
@@ -52,16 +57,26 @@ export interface Connection {
 export function useConnection(deps: ConnectionDeps): Connection {
   const [state, dispatch] = useReducer(reduce, INITIAL);
 
-  // Config loads at mount: the launcher's label and the brand colour come
-  // from it. Everything else waits for `open`.
-  useEffect(() => {
-    dispatch({ type: "start" });
-  }, []);
-
   // The effects read deps through a ref so a caller passing a fresh object
   // each render does not restart in-flight work.
   const depsRef = useRef(deps);
   depsRef.current = deps;
+
+  // Config is needed at mount: the launcher's label and the brand colour come
+  // from it. The loader usually has it already; otherwise fetch. Everything
+  // else waits for `open`.
+  useEffect(() => {
+    const d = depsRef.current;
+    if (d.initialConfig) {
+      const now = d.now ?? (() => Math.floor(Date.now() / 1000));
+      dispatch({
+        type: "start",
+        preloaded: { config: d.initialConfig, stored: d.store.load(), now: now() },
+      });
+    } else {
+      dispatch({ type: "start" });
+    }
+  }, []);
 
   const { step, config, session } = state;
 

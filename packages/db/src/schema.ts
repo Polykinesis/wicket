@@ -201,7 +201,11 @@ export const widgetSites = pgTable(
     siteKey: text("site_key").notNull().unique(),
     /** Exact origin strings. Compared with `===`, never suffix-matched. */
     origins: text("origins").array().notNull().default([]),
-    /** Public Turnstile site key. The secret lives in Worker secrets. */
+    /**
+     * Which of the platform's Turnstile widgets this site uses. Assigned by
+     * the app from its own key, never supplied by the tenant: siteverify
+     * needs the paired secret and only the widget Worker holds it.
+     */
     turnstileSiteKey: text("turnstile_site_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

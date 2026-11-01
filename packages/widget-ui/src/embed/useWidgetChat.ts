@@ -1,4 +1,4 @@
-import type { PageContext, VisitorSession } from "@cf-chat/shared/widget";
+import type { PageContext, VisitorSession, WidgetPublicConfig } from "@cf-chat/shared/widget";
 import { useAgentChat } from "agents/chat/react";
 import { useAgent } from "agents/react";
 import { useCallback, useMemo, useRef } from "react";
@@ -16,6 +16,8 @@ export interface WidgetChatOptions {
   readonly turnstile: TurnstileChallenge;
   readonly store: SessionStore;
   readonly turnstileContainer: () => HTMLElement;
+  /** Config the loader already fetched, so the embed does not fetch it again. */
+  readonly initialConfig?: WidgetPublicConfig | undefined;
 }
 
 export interface WidgetChat {
@@ -45,7 +47,7 @@ const isTerminalClose = (code: number): boolean => code === 1008 || (code >= 400
  * message history; the agent sends it over the socket on connect.
  */
 export function useWidgetChat(options: WidgetChatOptions): WidgetChat {
-  const { siteKey, client, turnstile, store, turnstileContainer } = options;
+  const { siteKey, client, turnstile, store, turnstileContainer, initialConfig } = options;
 
   // The socket controller must exist before `useAgent` runs, and the agent
   // must exist before the controller can act. A ref closes the loop.
@@ -64,6 +66,7 @@ export function useWidgetChat(options: WidgetChatOptions): WidgetChat {
     store,
     turnstileContainer,
     socket,
+    ...(initialConfig ? { initialConfig } : {}),
   });
 
   const sessionRef = useRef<VisitorSession | null>(null);

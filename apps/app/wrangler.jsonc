@@ -24,7 +24,14 @@
   // See the ADR-005 amendment.
   "vars": {
     "REPLY_MODEL_ID": "@cf/zai-org/glm-4.7-flash",
-    "AI_GATEWAY_ID": "default"
+    "AI_GATEWAY_ID": "default",
+    // The platform's Turnstile widget. Public by design (it ships in every
+    // embed), so a var rather than a secret; the paired secret lives in the
+    // widget Worker's TURNSTILE_SECRET_KEY. Tenants never bring their own:
+    // siteverify needs the secret that pairs with the site key, and that
+    // secret is ours. This value is Cloudflare's documented always-passes
+    // test key; production deploys override it with the real widget's key.
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
   },
 
   "kv_namespaces": [

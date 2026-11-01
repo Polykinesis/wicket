@@ -70,8 +70,19 @@ export const INITIAL: ConnectionState = {
 };
 
 export type ConnectionEvent =
-  /** The embed mounted: load config. */
-  | { readonly type: "start" }
+  /**
+   * The embed mounted. With `preloaded`, the loader already fetched config
+   * (it needed it to draw the launcher) and the machine starts configured;
+   * without it, config is fetched here.
+   */
+  | {
+      readonly type: "start";
+      readonly preloaded?: {
+        readonly config: WidgetPublicConfig;
+        readonly stored: VisitorSession | null;
+        readonly now: number;
+      };
+    }
   /** The visitor wants a conversation: the panel opened. */
   | { readonly type: "open" }
   /** `/config` answered. `stored` is whatever storage held, checked here. */
@@ -112,7 +123,9 @@ export function reduce(state: ConnectionState, event: ConnectionEvent): Connecti
     case "idle":
       switch (event.type) {
         case "start":
-          return { ...state, step: { kind: "loading_config", openRequested: false } };
+          return event.preloaded
+            ? configured(event.preloaded.config, event.preloaded.stored, event.preloaded.now)
+            : { ...state, step: { kind: "loading_config", openRequested: false } };
         case "open":
           return { ...state, step: { kind: "loading_config", openRequested: true } };
         default:
@@ -126,14 +139,8 @@ export function reduce(state: ConnectionState, event: ConnectionEvent): Connecti
             ? state
             : { ...state, step: { kind: "loading_config", openRequested: true } };
         case "config_loaded": {
-          const session = event.stored && isUsable(event.stored, event.now) ? event.stored : null;
-          const configured: ConnectionState = {
-            config: event.config,
-            session,
-            failures: 0,
-            step: { kind: "configured" },
-          };
-          return step.openRequested ? begin(configured) : configured;
+          const next = configured(event.config, event.stored, event.now);
+          return step.openRequested ? begin(next) : next;
         }
         case "gate_refused":
           return { ...state, step: { kind: "refused" } };
@@ -229,6 +236,20 @@ export function reduce(state: ConnectionState, event: ConnectionEvent): Connecti
     default:
       return assertNever(step);
   }
+}
+
+/** Config in hand: keep a stored session only if it is still usable. */
+function configured(
+  config: WidgetPublicConfig,
+  stored: VisitorSession | null,
+  now: number,
+): ConnectionState {
+  return {
+    config,
+    session: stored && isUsable(stored, now) ? stored : null,
+    failures: 0,
+    step: { kind: "configured" },
+  };
 }
 
 /** From `configured` to the first step that needs the visitor: connect if a session survived, else challenge. */

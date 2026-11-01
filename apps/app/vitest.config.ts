@@ -19,6 +19,7 @@ export default defineConfig({
         bindings: {
           SESSION_SECRET: "test-secret-not-a-real-key",
           WIDGET_TOKEN_SECRET: "test-widget-secret-not-a-real-key",
+          TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
         },
       },
     }),

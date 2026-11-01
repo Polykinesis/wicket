@@ -92,6 +92,26 @@ describe("mountWidget", () => {
     expect(el.style.getPropertyValue("--color-brand")).toBe("");
   });
 
+  it("renders on the first frame from preloaded config without calling /config", async () => {
+    let fetches = 0;
+    const el = mount({
+      config: { turnstileSiteKey: "0x", scope: { tenantName: "Preloaded" } },
+      client: fixtureClient({
+        fetchConfig: () => {
+          fetches += 1;
+          return fixtureClient().fetchConfig();
+        },
+      }),
+    });
+    const root = el.shadowRoot;
+    if (!root) throw new Error("no shadow root");
+    await act(async () => {});
+    expect(root.querySelector("button[aria-haspopup='dialog']")?.textContent).toBe(
+      "Ask a question",
+    );
+    expect(fetches).toBe(0);
+  });
+
   it("renders nothing for a refused site key", async () => {
     const { err } = await import("@cf-chat/shared/result");
     const el = mount({

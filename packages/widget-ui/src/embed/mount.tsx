@@ -1,3 +1,4 @@
+import type { WidgetPublicConfig } from "@cf-chat/shared/widget";
 import { type ReactElement, StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { LauncherVariant } from "../components/Panel.tsx";
@@ -18,6 +19,12 @@ export interface MountOptions {
   /** The compiled stylesheet, as text. Injected, never fetched. */
   readonly css: string;
   readonly launcher?: LauncherVariant;
+  /**
+   * Config the loader fetched to draw its own launcher before React arrived.
+   * Passing it means the widget renders on the first frame and `/config` is
+   * not requested twice.
+   */
+  readonly config?: WidgetPublicConfig;
   /** Overrides for tests and the preview. Defaults talk to `host`. */
   readonly client?: WidgetClient;
   readonly turnstile?: TurnstileChallenge;
@@ -70,6 +77,7 @@ export function mountWidget(hostEl: HTMLElement, options: MountOptions): Mounted
         store={store}
         turnstileContainer={turnstileContainer}
         launcher={options.launcher ?? "labelled"}
+        initialConfig={options.config}
         hostEl={hostEl}
       />
     </StrictMode>,
@@ -105,6 +113,7 @@ function WidgetApp({
   store,
   turnstileContainer,
   launcher,
+  initialConfig,
   hostEl,
 }: {
   readonly siteKey: string;
@@ -113,6 +122,7 @@ function WidgetApp({
   readonly store: SessionStore;
   readonly turnstileContainer: HTMLElement;
   readonly launcher: LauncherVariant;
+  readonly initialConfig: WidgetPublicConfig | undefined;
   readonly hostEl: HTMLElement;
 }): ReactElement | null {
   const chat = useWidgetChat({
@@ -121,6 +131,7 @@ function WidgetApp({
     turnstile,
     store,
     turnstileContainer: () => turnstileContainer,
+    initialConfig,
   });
   const [open, setOpen] = useState(false);
   const now = useNow();

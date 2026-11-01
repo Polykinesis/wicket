@@ -86,7 +86,8 @@ export async function mintSession(
   if (!config.ok) {
     return config;
   }
-  if (!isAllowedOrigin(config.value.config, request.headers.get("origin"))) {
+  const origin = request.headers.get("origin");
+  if (origin === null || !isAllowedOrigin(config.value.config, origin)) {
     return { ok: false, refusal: "origin_not_allowed" };
   }
   if (!turnstileToken) {
@@ -97,7 +98,13 @@ export async function mintSession(
     turnstileToken,
     request.headers.get("cf-connecting-ip"),
   );
-  if (!solved) {
+  if (!solved.solved) {
+    return { ok: false, refusal: "turnstile_failed" };
+  }
+  // The challenge was solved on a page; that page must be the one asking.
+  // Without this, a token solved on one allowlisted site could be presented
+  // with another allowlisted site's Origin header from outside a browser.
+  if (solved.hostname !== null && solved.hostname !== new URL(origin).hostname) {
     return { ok: false, refusal: "turnstile_failed" };
   }
 
