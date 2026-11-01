@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { pageLabel } from "../embed/page.ts";
 import type { WidgetScope } from "../scope.ts";
 import { SuggestionButton } from "./states.tsx";
 
@@ -9,19 +10,28 @@ import { SuggestionButton } from "./states.tsx";
  */
 export function EmptyState({
   scope,
+  page,
   onAsk,
 }: {
   readonly scope: WidgetScope;
+  /** The host page, when the embed knows it. */
+  readonly page: { readonly title: string } | null;
   readonly onAsk: (question: string) => void;
 }): ReactElement | null {
   const topics = scope.topics ?? [];
   const suggestions = scope.suggestedQuestions ?? [];
-  if (topics.length === 0 && suggestions.length === 0) {
+  const label = page ? pageLabel(page.title) : "";
+  if (topics.length === 0 && suggestions.length === 0 && label.length === 0) {
     return null;
   }
 
   return (
     <>
+      {label.length > 0 ? (
+        <p className="text-[13px] text-ink-3">
+          On this page: <span className="font-medium text-ink-2">{label}</span>
+        </p>
+      ) : null}
       {topics.length > 0 ? (
         <section>
           <h3 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">

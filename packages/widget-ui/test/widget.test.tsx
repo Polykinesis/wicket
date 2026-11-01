@@ -79,6 +79,46 @@ describe("launcher", () => {
   });
 });
 
+describe("connection", () => {
+  it("sends only when ready, and says why not otherwise", () => {
+    const { props, rerender } = renderWidget({ connection: "connecting" });
+    fireEvent.change(screen.getByLabelText("Ask a question"), { target: { value: "Hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send question" }));
+    expect(props.onAsk).not.toHaveBeenCalled();
+    expect(screen.getByText("Connecting").getAttribute("role")).toBe("status");
+
+    rerender(<Widget {...props} connection="offline" />);
+    expect(screen.getByText("Connection lost, trying again")).toBeTruthy();
+
+    rerender(<Widget {...props} connection="ready" />);
+    fireEvent.click(screen.getByRole("button", { name: "Send question" }));
+    expect(props.onAsk).toHaveBeenCalledWith("Hi");
+    expect(screen.getByText("Only uses what Northwind Rota has published")).toBeTruthy();
+  });
+
+  it("replaces the body with a notice and disables the input when refused", () => {
+    renderWidget({ connection: "refused" });
+    expect(
+      screen.getByRole("heading", { name: "Chat is not available on this page" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("What it knows about")).toBeNull();
+    expect((screen.getByLabelText("Ask a question") as HTMLTextAreaElement).disabled).toBe(true);
+  });
+});
+
+describe("page context", () => {
+  it("names the host page above the topics", () => {
+    renderWidget({ page: { title: "Pricing | Northwind Rota" } });
+    const label = screen.getByText("Pricing", { selector: "span" });
+    expect(label.parentElement?.textContent).toBe("On this page: Pricing");
+  });
+
+  it("is omitted when the embed does not know the page", () => {
+    renderWidget({ page: null });
+    expect(screen.queryByText(/On this page/)).toBeNull();
+  });
+});
+
 describe("scope line", () => {
   it("counts documents and says how fresh they are", () => {
     expect(scopeLine(SCOPE, NOW)).toBe(

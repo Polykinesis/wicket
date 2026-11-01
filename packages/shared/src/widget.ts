@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type TenantId, tenantIdSchema } from "./ids.ts";
+import { conversationIdSchema, type TenantId, tenantIdSchema } from "./ids.ts";
 
 /**
  * The public identifier a tenant pastes into their site.
@@ -93,6 +93,49 @@ export const widgetConfigSchema = z.object({
 });
 
 export const widgetConfigKvKey = (siteKey: WidgetSiteKey): string => `widget:${siteKey}`;
+
+/**
+ * What `GET /config` on the widget Worker returns: the public subset. The
+ * tenant id and the origin list stay server-side; the embed has no use for
+ * either and the list is a map of where the widget is deployed.
+ */
+export const widgetPublicConfigSchema = widgetConfigSchema.pick({
+  turnstileSiteKey: true,
+  scope: true,
+  brandColor: true,
+});
+export type WidgetPublicConfig = z.infer<typeof widgetPublicConfigSchema>;
+
+/**
+ * What `POST /session` returns and what the embed stores: the visitor token,
+ * the conversation it addresses and when it stops working (unix seconds, the
+ * envelope's `exp`). The embed drops it ahead of expiry rather than opening a
+ * socket that is certain to be refused.
+ */
+export const visitorSessionSchema = z.object({
+  token: z.string().min(1),
+  conversationId: conversationIdSchema,
+  expiresAt: z.int().positive(),
+});
+export type VisitorSession = z.infer<typeof visitorSessionSchema>;
+
+/**
+ * Where the visitor is, sent as `UIMessage.metadata.page` on every question
+ * and read by the agent as data, never as instruction. Query and fragment are
+ * stripped client-side so a session id in a URL never reaches the prompt or
+ * the logs; the server checks again. Caps are generous for real pages and
+ * tight enough that a hostile page cannot pad the prompt.
+ */
+export const pageContextSchema = z.object({
+  url: z
+    .url({ protocol: /^https?$/ })
+    .max(2000)
+    .refine((value) => !value.includes("?") && !value.includes("#"), {
+      message: "Page URL must not carry a query or fragment",
+    }),
+  title: z.string().max(200),
+});
+export type PageContext = z.infer<typeof pageContextSchema>;
 
 /**
  * Whether a request's `Origin` may use this widget.

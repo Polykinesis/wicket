@@ -3,8 +3,9 @@ import { Composer } from "./components/Composer.tsx";
 import { EmptyState } from "./components/EmptyState.tsx";
 import { HandoffForm } from "./components/HandoffForm.tsx";
 import { Launcher, type LauncherVariant, Panel } from "./components/Panel.tsx";
-import { GapNotice, HandoffSent } from "./components/states.tsx";
+import { ConnectionRefused, GapNotice, HandoffSent } from "./components/states.tsx";
 import { TurnBlock } from "./components/TurnBlock.tsx";
+import type { ConnectionView } from "./embed/connection.ts";
 import type { HandoffReceipt, SubmitHandoff } from "./handoff.ts";
 import { handoffRecipient, launcherLabel, scopeLine, type WidgetScope } from "./scope.ts";
 import type { TurnKind, TurnView } from "./turn.ts";
@@ -19,6 +20,14 @@ export interface WidgetProps {
   readonly onSubmitHandoff: SubmitHandoff;
   /** Icon-only launcher for crowded host corners. Labelled by default. */
   readonly launcher?: LauncherVariant;
+  /**
+   * Whether a question can be sent right now. Defaults to `ready` so fixtures
+   * and the preview need not say. `refused` replaces the body with a notice;
+   * the other two only hold the composer and say why in its footer.
+   */
+  readonly connection?: ConnectionView;
+  /** The host page, for the "On this page" line in the empty state. */
+  readonly page?: { readonly title: string } | null;
   /** Injected for tests and so relative dates agree with the server's clock. */
   readonly now?: Date;
 }
@@ -43,6 +52,8 @@ export function Widget({
   onAsk,
   onSubmitHandoff,
   launcher = "labelled",
+  connection = "ready",
+  page = null,
   now = new Date(),
 }: WidgetProps): ReactElement {
   const [direct, setDirect] = useState<Direct>({ phase: "closed" });
@@ -97,6 +108,7 @@ export function Widget({
         <Composer
           tenantName={scope.tenantName}
           busy={busy}
+          connection={connection}
           onAsk={onAsk}
           onTalkToPerson={() =>
             setDirect((current) => (current.phase === "sent" ? current : { phase: "open" }))
@@ -104,7 +116,10 @@ export function Widget({
         />
       }
     >
-      {turns.length === 0 ? <EmptyState scope={scope} onAsk={onAsk} /> : null}
+      {connection === "refused" ? <ConnectionRefused /> : null}
+      {connection !== "refused" && turns.length === 0 ? (
+        <EmptyState scope={scope} page={page} onAsk={onAsk} />
+      ) : null}
       {turns.map((turn, index) => (
         <TurnBlock
           // Turns are append-only and never reorder, so position is identity.

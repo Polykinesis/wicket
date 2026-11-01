@@ -15,6 +15,7 @@ import {
 } from "@cf-chat/shared";
 import { z } from "zod";
 import { withDb } from "./api/db.ts";
+import { liveProjectionDeps, projectWidgetConfigQuietly } from "./widget-config.ts";
 
 /**
  * Queue messages cross a trust boundary like any other input: a malformed or
@@ -93,6 +94,12 @@ export interface IngestDeps {
   ) => Promise<void>;
   /** Reaps the tombstone once the index item and the R2 object are gone. */
   readonly hardDelete: (tenantId: TenantId, sourceId: SourceId) => Promise<void>;
+  /**
+   * The widget's scope line counts ready sources, so it is re-projected to KV
+   * when a source becomes answerable or stops being one. Must not throw: a
+   * stale count is not worth failing the message over.
+   */
+  readonly refreshWidgetScope: (tenantId: TenantId) => Promise<void>;
 }
 
 /**
@@ -307,6 +314,7 @@ async function handleIndex(message: IndexMessage, deps: IngestDeps): Promise<boo
     errorCode: null,
     errorMessage: null,
   });
+  await deps.refreshWidgetScope(tenantId);
   return true;
 }
 
@@ -392,6 +400,7 @@ async function handleDelete(message: DeleteMessage, deps: IngestDeps): Promise<b
 
   await deps.storage.delete(row.r2Key);
   await deps.hardDelete(tenantId, sourceId);
+  await deps.refreshWidgetScope(tenantId);
   return true;
 }
 
@@ -464,6 +473,7 @@ async function settle(
     errorCode: null,
     errorMessage: null,
   });
+  await deps.refreshWidgetScope(tenantId);
   return true;
 }
 
@@ -519,6 +529,7 @@ export function liveIngestDeps(): IngestDeps {
     hardDelete: async (tenantId, sourceId) => {
       await withDb((db) => withTenant(db, tenantId, (tx) => deleteSource(tx, tenantId, sourceId)));
     },
+    refreshWidgetScope: (tenantId) => projectWidgetConfigQuietly(tenantId, liveProjectionDeps()),
   };
 }
 

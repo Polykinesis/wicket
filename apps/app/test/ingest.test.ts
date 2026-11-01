@@ -36,6 +36,7 @@ function harness(overrides?: {
   const updates: SourceStatusUpdate[] = [];
   const checks: Array<{ sourceId: SourceId; attempt: number }> = [];
   const reaped: SourceId[] = [];
+  const scopeRefreshes: true[] = [];
 
   const row: SourceRow = {
     id: sourceId,
@@ -74,9 +75,12 @@ function harness(overrides?: {
     hardDelete: async (_tenant, id) => {
       reaped.push(id);
     },
+    refreshWidgetScope: async () => {
+      scopeRefreshes.push(true);
+    },
   };
 
-  return { sourceId, row, deps, indexer, updates, checks, reaped };
+  return { sourceId, row, deps, indexer, updates, checks, reaped, scopeRefreshes };
 }
 
 function message(tenantId: TenantId, sourceId: SourceId): unknown {
@@ -95,6 +99,18 @@ describe("ingest", () => {
   beforeEach(async () => {
     const listed = await env.KNOWLEDGE.list();
     await Promise.all(listed.objects.map((object) => env.KNOWLEDGE.delete(object.key)));
+  });
+
+  it("re-projects the widget scope when a source becomes ready, and not before", async () => {
+    const failed = harness();
+    // No object in R2: the row goes to `error`, which is not answerable.
+    expect(await ingestOne(message(tenantId, failed.sourceId), failed.deps)).toBe(true);
+    expect(failed.scopeRefreshes).toHaveLength(0);
+
+    const { sourceId, row, deps, scopeRefreshes } = harness();
+    await env.KNOWLEDGE.put(row.r2Key, "Refunds take five days.");
+    expect(await ingestOne(message(tenantId, sourceId), deps)).toBe(true);
+    expect(scopeRefreshes).toHaveLength(1);
   });
 
   it("indexes an uploaded file and marks the row ready", async () => {
@@ -414,12 +430,13 @@ describe("ingest deletion", () => {
   }
 
   it("removes the index item, the object and then the row", async () => {
-    const { sourceId, row, deps, indexer, reaped } = tombstoned();
+    const { sourceId, row, deps, indexer, reaped, scopeRefreshes } = tombstoned();
     await env.KNOWLEDGE.put(row.r2Key, "Refunds take five days.");
 
     const done = await ingestOne(remove(tenantId, sourceId), deps);
 
     expect(done).toBe(true);
+    expect(scopeRefreshes).toHaveLength(1);
     expect(indexer.removed).toEqual(["item-1"]);
     expect(await env.KNOWLEDGE.get(row.r2Key)).toBeNull();
     expect(reaped).toEqual([sourceId]);

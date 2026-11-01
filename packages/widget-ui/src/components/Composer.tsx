@@ -1,7 +1,14 @@
 import { type FormEvent, type KeyboardEvent, type ReactElement, useId, useState } from "react";
+import type { ConnectionView } from "../embed/connection.ts";
 import { SendIcon } from "../icons.tsx";
 
 const QUESTION_MAX = 2000;
+
+const CONNECTION_NOTE: Readonly<Record<Exclude<ConnectionView, "ready">, string>> = {
+  connecting: "Connecting",
+  offline: "Connection lost, trying again",
+  refused: "Chat is not available on this page",
+};
 
 /**
  * Question input plus the always-visible way out to a person. Enter sends,
@@ -11,18 +18,22 @@ const QUESTION_MAX = 2000;
 export function Composer({
   tenantName,
   busy,
+  connection,
   onAsk,
   onTalkToPerson,
 }: {
   readonly tenantName: string;
   readonly busy: boolean;
+  readonly connection: ConnectionView;
   readonly onAsk: (question: string) => void;
   readonly onTalkToPerson: () => void;
 }): ReactElement {
   const id = useId();
   const [value, setValue] = useState("");
   const question = value.trim();
-  const canSend = !busy && question.length > 0;
+  // Typing is allowed while connecting so the question is ready when the
+  // socket is; only sending waits. Refused disables the input outright.
+  const canSend = !busy && connection === "ready" && question.length > 0;
 
   function send(event?: FormEvent): void {
     event?.preventDefault();
@@ -52,6 +63,7 @@ export function Composer({
           maxLength={QUESTION_MAX}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={onKeyDown}
+          disabled={connection === "refused"}
           placeholder="Ask a question"
           className="max-h-30 min-h-11 flex-1 resize-none rounded-[10px] border border-field px-3 py-2.5 text-base leading-snug"
         />
@@ -66,7 +78,12 @@ export function Composer({
       </form>
       {/* Side by side when it fits; at phone width the line stacks rather than wrapping mid-sentence beside the button. */}
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-ink-3 max-sm:flex-col max-sm:items-start max-sm:gap-0.5">
-        <span>Only uses what {tenantName} has published</span>
+        {/* The footnote slot doubles as the connection status, so nothing new appears or shifts. */}
+        <span role="status">
+          {connection === "ready"
+            ? `Only uses what ${tenantName} has published`
+            : CONNECTION_NOTE[connection]}
+        </span>
         <button
           type="button"
           onClick={onTalkToPerson}

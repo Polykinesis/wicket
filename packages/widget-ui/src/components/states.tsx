@@ -53,6 +53,19 @@ export function Searching({
 }
 
 /**
+ * The site key or the page's origin was refused. Nothing the visitor can do
+ * about it, so no retry and no form: the owner has to fix the allowlist. The
+ * copy blames the setup, not the visitor.
+ */
+export function ConnectionRefused(): ReactElement {
+  return (
+    <GapNotice heading="Chat is not available on this page">
+      <p>The site owner has not enabled it for this address.</p>
+    </GapNotice>
+  );
+}
+
+/**
  * The "not covered" panel. Dashed and amber rather than red: nothing went
  * wrong, the content just does not say, and the visitor should read it as an
  * honest answer rather than an error.

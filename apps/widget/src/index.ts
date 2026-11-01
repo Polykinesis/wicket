@@ -73,6 +73,26 @@ function refuse(reason: string, request: Request): Response {
 }
 
 /**
+ * The socket's refusal. Browsers hide the HTTP status of a failed WebSocket
+ * upgrade: a 403 reaches the page as a close with code 1006, the same code as
+ * a dropped connection, so the embed could not tell "your token expired" from
+ * "the network blipped" and would retry a refusal forever. Completing the
+ * handshake and closing with an application code (4403) gives the embed a
+ * signal it can read. It carries exactly what the 403 did: refused, no reason.
+ * No Durable Object is touched; the pair is closed before anything is routed.
+ */
+export const SOCKET_REFUSED_CODE = 4403;
+
+function refuseSocket(reason: string, request: Request): Response {
+  console.warn("widget gate refused", { reason, origin: request.headers.get("origin") });
+  const pair = new WebSocketPair();
+  const [client, server] = [pair[0], pair[1]];
+  server.accept();
+  server.close(SOCKET_REFUSED_CODE, "Not authorised");
+  return new Response(null, { status: 101, webSocket: client });
+}
+
+/**
  * CORS, scoped to the origins a tenant has actually allowlisted.
  *
  * The allowlisted origin is echoed rather than `*` because these responses
@@ -101,7 +121,12 @@ async function preflight(deps: GateDeps, request: Request): Promise<Response> {
     : refuse("preflight_origin", request);
 }
 
-/** The public Turnstile site key. Public by design; the secret never leaves the Worker. */
+/**
+ * What the embed needs before the first message: the public Turnstile site
+ * key, what the panel says about itself, and the brand colour. All public by
+ * design. The tenant id and the origin list stay behind: the embed has no use
+ * for either and the list is a map of where the widget is deployed.
+ */
 async function config(deps: GateDeps, request: Request): Promise<Response> {
   const headers = await corsHeaders(deps, request);
   if (!headers) {
@@ -111,10 +136,15 @@ async function config(deps: GateDeps, request: Request): Promise<Response> {
   if (!found.ok) {
     return refuse(found.refusal, request);
   }
+  const { turnstileSiteKey, scope, brandColor } = found.value.config;
   headers.set("content-type", "application/json");
-  return new Response(JSON.stringify({ turnstileSiteKey: found.value.config.turnstileSiteKey }), {
-    headers,
-  });
+  // Short cache so a settings change shows within minutes without a KV read
+  // per page view; the KV projection is already eventually consistent.
+  headers.set("cache-control", "public, max-age=60");
+  return new Response(
+    JSON.stringify({ turnstileSiteKey, scope, ...(brandColor ? { brandColor } : {}) }),
+    { headers },
+  );
 }
 
 /**
@@ -173,7 +203,7 @@ async function chat(deps: GateDeps, request: Request, env: Env): Promise<Respons
   const url = new URL(request.url);
   const admitted = await admitSocket(deps, request, url.searchParams.get("t"));
   if (!admitted.ok) {
-    return refuse(admitted.refusal, request);
+    return refuseSocket(admitted.refusal, request);
   }
 
   const target = new URL(

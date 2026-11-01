@@ -5,6 +5,7 @@ import auth from "./routes/auth.ts";
 import session from "./routes/session.ts";
 import sources from "./routes/sources.ts";
 import tenants from "./routes/tenants.ts";
+import widget from "./routes/widget.ts";
 
 export const api = new Hono<{ Variables: SessionVariables }>().basePath("/api");
 
@@ -14,6 +15,7 @@ api.route("/auth", auth);
 api.route("/tenants", tenants);
 api.route("/session", session);
 api.route("/sources", sources);
+api.route("/widget", widget);
 
 /**
  * The single place AppError becomes a response. Details are only serialised
