@@ -182,7 +182,59 @@ export const questionLog = pgTable(
   (table) => [index("question_log_tenant_created_idx").on(table.tenantId, table.createdAt.desc())],
 );
 
+/**
+ * One row per embed site key. The gate half of `WidgetConfig`: which origins
+ * may use the key and which Turnstile widget to render. A tenant may hold
+ * several (a staging site and a production one), each projected to its own
+ * KV entry by `projectWidgetConfig`.
+ *
+ * `site_key` is unique across tenants because it is the KV key and the only
+ * thing the widget Worker has before it knows the tenant.
+ */
+export const widgetSites = pgTable(
+  "widget_sites",
+  {
+    id: uuid("id").primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    siteKey: text("site_key").notNull().unique(),
+    /** Exact origin strings. Compared with `===`, never suffix-matched. */
+    origins: text("origins").array().notNull().default([]),
+    /** Public Turnstile site key. The secret lives in Worker secrets. */
+    turnstileSiteKey: text("turnstile_site_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("widget_sites_tenant_idx").on(table.tenantId)],
+);
+
+/**
+ * What the widget says about itself, one row per tenant, hand-set in the
+ * dashboard. Absent row means defaults: the panel shows only the tenant name
+ * and what `countReadySources` reports. `tenantName` is `tenants.name`, read
+ * at projection time, not copied here. `topics` and `suggested_questions` are
+ * manual until the `KnowledgeGapDigest` cron derives them from `question_log`.
+ */
+export const widgetSettings = pgTable("widget_settings", {
+  tenantId: uuid("tenant_id")
+    .primaryKey()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  /** Who a handoff goes to, as the visitor should read it: "Sam", "the team". */
+  ownerName: text("owner_name"),
+  /** Free text such as "within 4 hours". Never computed, so never wrong. */
+  replyTime: text("reply_time"),
+  topics: text("topics").array(),
+  suggestedQuestions: text("suggested_questions").array(),
+  /** Six-digit hex, validated by `brandColorSchema` before it gets here. */
+  brandColor: text("brand_color"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type TenantRow = typeof tenants.$inferSelect;
+export type WidgetSiteRow = typeof widgetSites.$inferSelect;
+export type WidgetSettingsRow = typeof widgetSettings.$inferSelect;
 export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type QuestionLogRow = typeof questionLog.$inferSelect;

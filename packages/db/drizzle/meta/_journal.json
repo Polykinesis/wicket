@@ -50,6 +50,20 @@
       "when": 1788677826321,
       "tag": "0006_conversations_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793546129800,
+      "tag": "0007_widget_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793546130800,
+      "tag": "0008_widget_tables_rls",
+      "breakpoints": true
     }
   ]
 }
